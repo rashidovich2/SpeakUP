@@ -53,7 +53,6 @@ class CodeGen {
 $ver = "1.7.1";
 
 $files = array(
-	array('css', 'styles/loading.css'),
 	array('css', 'styles/app.css'),
 	array('js',  'scripts/simplewebrtc.bundle.js'),
 	array('js',  'scripts/tooltip.min.js'), // http://darsa.in/tooltip/
@@ -162,11 +161,10 @@ trackStat("SpeakUP", $ver, "start");
 
 		<!-- VIDEOS -->
 		<div id='message' class='statusWindow noselect'></div>
-		<div id='djPanel'></div>
 
 		<div class='videoContainer' id='ownVideo'>
 			<div class='statusPanel noselect'>
-				<div id='localStatus' class='status'></div>
+				<div id='localStatus' class='statusVol'></div>
 				<div id='localNick' class='statusNick'></div>
 			</div>
 			<video id='localVideo'></video>

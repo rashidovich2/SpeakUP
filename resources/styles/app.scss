@@ -1,10 +1,4 @@
-@mixin transition($value...) {
-	-webkit-transition: $value;
-	-moz-transition: $value;
-	-ms-transition: $value;
-	-o-transition: $value;
-	transition: $value;
-}
+@import "css3", "loading", "font", "tooltip";
 
 @mixin maximizeElement {
 	position: fixed;
@@ -14,7 +8,9 @@
 	height: 100%;
 }
 
-@import "loading", "font", "tooltip";
+@mixin transformTranslate($value...) {
+	@include transform(tranlate($value));
+}
 
 * {
 	box-sizing: border-box;
@@ -48,11 +44,7 @@ body {
 }
 
 .noselect {
-	-webkit-user-select: none;
-	-moz-user-select: none;
-	-ms-user-select: none;
-	-o-user-select: none;
-	user-select: none;
+	@include css3-prefix(user-select, none);
 	cursor: default;
 }
 
@@ -118,12 +110,12 @@ a {
 
 /* inputs */
 input[type="text"], input[type="password"], input[type="file"], select, textarea, .textarea{
+	@include transition(.3s box-shadow);
 	border-radius: 3px;
 	border: 1px solid #aaa;
 	box-shadow: 0 0 2px 1px rgba(150,200,255, .5);
 	font-size: inherit;
 	padding: 5px 3px;
-	@include transition(.3s box-shadow);
 }
 
 input[type="text"]:hover, input[type="password"]:hover, input[type="file"]:hover, select:hover, textarea:hover{
@@ -136,6 +128,7 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 }
 
 .btn {
+	@include transition(.3s box-shadow, background-color);
 	border-radius: 3px;
 	border: 1px solid #aaa;
 	box-shadow: 0 0 2px 1px rgba(150,200,255, .5), inset 0 0 3px 2px rgba(255,255,255,.1);
@@ -144,7 +137,6 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 	cursor:pointer;
 	text-align:center;
 	padding:2px;
-	@include transition(.3s box-shadow, background-color);
 }
 
 .btn:hover, .btn:focus {
@@ -208,19 +200,19 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 }
 
 .statusPanel {
+	@include transformTranslate(-50%, 0);
 	position: absolute;
 	top: 10px;
 	left: 50%;
-	transform: translate(-50%, 0);
 	z-index: 10;
 	display: flex;
 	opacity: .7;
 
 	.statusVol {
+		@include transition(.2s background-color, .2s box-shadow);
 		width: 10px;
 		height: 10px;
 		border-radius: 50%;
-		@include transition(.2s background-color, .2s box-shadow);
 		margin: 3px 5px 3px 0;
 	}
 
@@ -293,10 +285,10 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 }
 
 .statusWindow {
+	@include transformTranslate(-50%, 0);
 	position: fixed;
 	top: 15px;
 	left: 50%;
-	transform: translate(-50%, 0);
 	max-width: 400px;
 	width: 90%;
 	background: #cef;
@@ -310,10 +302,10 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 }
 
 #loader {
+	@include transformTranslate(-50%, -50%);
 	position: fixed;
 	top: 50%;
 	left: 50%;
-	transform: translate(-50%, -50%);
 
 	.logo {
 		width: 378px;
@@ -379,20 +371,20 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 }
 
 #toolbar {
+	@include transformTranslate(-50%, 0);
 	position: fixed;
 	bottom: 20px;
 	left: 50%;
-	transform: translate(-50%, 0);
 	width: 95%;
 	max-width: 600px;
 	z-index: 1;
 
 	button {
+		@include transition(.1s color, .1s opacity);
 		border: 0;
 		background: none;
 		color: #fff;
 		text-shadow: 0 0 15px #000;
-		@include transition(.1s color, .1s opacity);
 		cursor: pointer;
 	}
 
@@ -413,12 +405,12 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 }
 
 #preferencesWindow, #shareWindow {
+	@include transformTranslate(-50%, 0);
 	position: fixed;
 	bottom: 90px;
 	left: 50%;
 	width: 400px;
 	max-width: 95%;
-	transform: translate(-50%, 0);
 }
 
 #loginWindow {
@@ -476,7 +468,7 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 	}
 }
 
-.loading{
+.loading {
 	.videoContainer,
 	#remotes,
 	#chat,
