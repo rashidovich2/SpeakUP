@@ -1,5 +1,5 @@
 <?
-//error_reporting(0);
+error_reporting(0);
 require('../../html/scripts/engine/config.php');
 require('../../html/scripts/engine/functions.php');
 
