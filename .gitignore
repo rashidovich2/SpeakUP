@@ -1,6 +1,6 @@
 client/
 resources/cache/
+resources/styles/*.css
 build.sh
 build.php
-*.sass
-*.scss
+.sass-cache

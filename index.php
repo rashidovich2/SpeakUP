@@ -8,11 +8,11 @@ class CodeGen {
 	public $javascript = '';
 	public $iconsTouch = '';
 	public $iconsFav = '';
-	
+
 	private $sizes;
 	private $files;
 	private $staticPath;
-	
+
 	private function listIcons($rel, $path, $prefix, $sizesArray) {
 		$str = "\n";
 		foreach ($sizesArray as $size) {
@@ -20,11 +20,11 @@ class CodeGen {
 		}
 		return $str;
 	}
-	
+
 	private function fillUp() {
 		$this->stylesheet = "\n";
 		$this->javascript = "\n";
-		
+
 		foreach ($this->files as $file){
 			$fileType = $file[0];
 			$filePath = 'resources/' . $file[1];
@@ -37,20 +37,20 @@ class CodeGen {
 			}
 		}
 	}
-	
+
 	public function __construct($static, $files) {
 		$this->sizes = new stdClass();
 		$this->sizes->touch = array(180, 152, 144, 120, 114, 76, 72, 60, 57, 48);
 		$this->sizes->fav = array(16, 32, 48, 64, 96, 128);
-		
+
 		$this->files = $files;
 		$this->staticPath = $static;
-		
+
 		$this->fillUp();
 	}
 }
 
-$ver = "1.6";
+$ver = "1.7";
 
 $files = array(
 	array('css', 'styles/app.css'),
@@ -75,20 +75,20 @@ trackStat("SpeakUP", $ver, "start");
 		<link rel='shortcut icon' href='<?=$static?>/apps/speakup/images/icons/favicon.png' />
 		<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Scada&subset=latin,cyrillic' />
 		<meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1' />
-		
+
 		<meta name='title' value='SpeakUP!' />
 		<meta name='description' value='Instant videoconferences for up to 4 people' />
 		<link rel="image_src" href='<?=$static?>/apps/speakup/images/screenshot.png' />
 		<link rel="chrome-webstore-item" href="https://chrome.google.com/webstore/detail/mkjefhhjabmifmakbfmjgjbhhpiloamp">
-		
+
 		<meta property='og:title' content='SpeakUP!'/>
 		<meta property='og:type' content='website'/>
 		<meta property='og:image' content='<?=$static?>/apps/speakup/images/screenshot.png'/>
 		<meta property='og:description' content='Instant videoconferences for up to 4 people'/>
-		
+
 		<?=$code->iconsTouch?>
 		<?=$code->iconsFav?>
-		
+
 		<?=$code->stylesheet?>
 	</head>
 	<body class='loading' data-version="<?=$ver?>" data-static="<?=$static?>">
@@ -123,7 +123,7 @@ trackStat("SpeakUP", $ver, "start");
 			</div>
 		</div>
 		<!-- end: LOADING AND LOGIN SCREEN -->
-		
+
 		<!-- MODAL WINDOWS -->
 		<div id='preferencesWindow' class='modal'>
 			<h3>Preferences</h3>
@@ -149,7 +149,7 @@ trackStat("SpeakUP", $ver, "start");
 				</div>
 			</form>
 		</div>
-		
+
 		<div id='shareWindow' class='modal'>
 			<h3>Share Room</h3>
 			<div class='row'>
@@ -161,11 +161,11 @@ trackStat("SpeakUP", $ver, "start");
 			</div>
 		</div>
 		<!-- end: MODAL WINDOWS -->
-		
+
 		<!-- VIDEOS -->
 		<div id='message' class='statusWindow noselect'></div>
 		<div id='djPanel'></div>
-		
+
 		<div class='videoContainer' id='ownVideo'>
 			<div class='statusPanel noselect'>
 				<div id='localStatus' class='status'></div>
@@ -175,7 +175,7 @@ trackStat("SpeakUP", $ver, "start");
 		</div>
 		<div id='remotes'></div>
 		<!-- end: VIDEOS -->
-		
+
 		<!-- CHAT -->
 		<div id='chat'>
 			<div id='chat-toggle' class='noselect' data-tooltip='Close Chat Panel'>X</div>
@@ -194,40 +194,35 @@ trackStat("SpeakUP", $ver, "start");
 			</div>
 		</div>
 		<!-- end: CHAT -->
-		
+
 		<!-- TOOLBAR -->
 		<div id='toolbar' class='btn-group'>
 			<button id='tlb-cam' data-tooltip='Toggle Video' class='active'>
 				<i class='icon icon-video icon-fw icon-xl'></i>
 			</button>
-			
+
 			<button id='tlb-screen' data-tooltip='Toggle Screen Share' class='inactive'>
 				<i class='icon icon-screen icon-fw icon-xl'></i>
 			</button>
-			
+
 			<button id='tlb-share' data-tooltip='Share Room Link' class='active'>
 				<i class='icon icon-share icon-fw icon-xl'></i>
 			</button>
-			
+
 			<button id='tlb-pref' data-tooltip='Preferences' class='active'>
 				<i class="icon icon-cog icon-fw icon-xl"></i>
 			</button>
-			
+
 			<button id='tlb-full' data-tooltip='Fullscreen' class='inactive'>
 				<i class='icon icon-resize-full icon-fw icon-xl'></i>
 			</button>
-			
+
 			<button id='tlb-chat' data-tooltip='Toggle Chat' class='inactive'>
 				<i class='icon icon-chat icon-fw icon-xl'></i>
 			</button>
 		</div>
 		<!-- end: TOOLBAR -->
 
-		<!-- JS LIBS -->
-		<script src='//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js'></script>
-		<?=$code->javascript?>
-		<!-- end: JS LIBS -->
-		
 		<!-- Google Analytics -->
 		<script>
 			(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -239,5 +234,10 @@ trackStat("SpeakUP", $ver, "start");
 			ga('send', 'pageview');
 		</script>
 		<!-- END: Google Analytics -->
+
+		<!-- JS LIBS -->
+		<script src='//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js'></script>
+		<?=$code->javascript?>
+		<!-- end: JS LIBS -->
 	</body>
 </html>
