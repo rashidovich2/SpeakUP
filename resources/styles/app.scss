@@ -8,7 +8,7 @@
 	height: 100%;
 }
 
-@mixin transformTranslate($x, %y) {
+@mixin transformTranslate($x, $y) {
 	@include transform(tranlate($x, $y));
 }
 
