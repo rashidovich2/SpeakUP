@@ -301,7 +301,20 @@ function showLoginWindow() {
 	});
 }
 
-function prepareCall(){
+function removeVideo(id) {
+	if (!id) {
+		$('#remotes .videoContainer').remove();
+	} else {
+		$('#container_' + webrtc.getDomId(peer)).remove();
+	}
+
+	playSound('user_leave');
+	videoCount--;
+	resizeRemotes();
+	msgIfEmpty();
+}
+
+function prepareCall() {
 	if (initFailed) return;
 
 	var mediaOptions = {
@@ -447,15 +460,7 @@ function prepareCall(){
 	});
 
 	webrtc.on('videoRemoved', function (video, peer) {
-		var remotes = document.getElementById('remotes');
-		var el = document.getElementById('container_' + webrtc.getDomId(peer));
-		if (remotes && el) {
-			remotes.removeChild(el);
-		}
-		playSound('user_leave');
-		videoCount--;
-		resizeRemotes();
-		msgIfEmpty();
+		removeVideo(webrtc.getDomId(peer));
 	});
 
 	webrtc.on('localScreenRemoved', function () {
@@ -469,7 +474,7 @@ function prepareCall(){
 
 	// local p2p/ice failure
 	webrtc.on('iceFailed', function (peer) {
-		console.log('local fail');
+		console.log('local fail', peer);
 	});
 
 	// remote p2p/ice failure
