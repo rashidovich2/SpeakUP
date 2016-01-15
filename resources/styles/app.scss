@@ -9,7 +9,7 @@
 }
 
 @mixin transformTranslate($x, $y) {
-	@include transform(tranlate($x, $y));
+	@include css3-prefix('transform', "translate(#{$x}, #{$y})");
 }
 
 * {
