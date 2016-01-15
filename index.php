@@ -50,13 +50,11 @@ class CodeGen {
 	}
 }
 
-$ver = "1.7";
+$ver = "1.7.1";
 
 $files = array(
-	array('css', 'styles/app.css'),
 	array('css', 'styles/loading.css'),
-	array('css', 'styles/font.css'),
-	array('css', 'styles/tooltip.css'),
+	array('css', 'styles/app.css'),
 	array('js',  'scripts/simplewebrtc.bundle.js'),
 	array('js',  'scripts/tooltip.min.js'), // http://darsa.in/tooltip/
 	array('js',  'scripts/screenfull.min.js'), // https://github.com/sindresorhus/screenfull.js
