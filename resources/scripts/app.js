@@ -304,14 +304,19 @@ function showLoginWindow() {
 	});
 }
 
-function removeVideo(id) {
+function removeVideo(id, error) {
 	if (!id) {
 		$('#remotes .videoContainer').remove();
 	} else {
 		$('#container_' + id).remove();
 	}
 
-	playSound('user_leave');
+	if (error)
+		playSound('error');
+	} else {
+		playSound('user_leave');
+	}
+
 	videoCount--;
 	resizeRemotes();
 	msgIfEmpty();
@@ -477,9 +482,7 @@ function prepareCall() {
 
 	// local p2p/ice failure
 	webrtc.on('iceFailed', function (peer) {
-		console.log('local fail', peer, webrtc.getDomId(peer));
-		removeVideo(webrtc.getDomId(peer));
-		playSound('error');
+		removeVideo(webrtc.getDomId(peer), true);
 	});
 
 	// remote p2p/ice failure
@@ -888,12 +891,26 @@ function injectElements() {
 	Config.staticPath = $('body').data('static');
 }
 
+function cacheResources() {
+	var audioFiles = ['user_join', 'user_leave', 'message', 'error', 'scream1', 'scream2'];
+	for (var i = 0; i < audioFiles.length; i++) {
+		var snd = new Audio(Config.staticPath + "/apps/speakup/sounds/" + audioFiles[i] + ".ogg");
+	}
+
+	var imageFiles = ['screamer1', 'screamer2'];
+	for (var i = 0; i < imageFiles.length; i++) {
+		var img = new Image();
+		img.src = Config.staticPath + '/apps/speakup/images/' + imageFiles[i] + '.jpg';
+	}
+}
+
 function systemInit() {
 	initFailed = false;
 	enumerateDevices(function(){
 		injectElements();
 		initVolumeControl();
 		enableScreamers();
+		cacheResources();
 		initButtons();
 		initTooltips();
 		prepareCall();

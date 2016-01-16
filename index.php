@@ -50,7 +50,7 @@ class CodeGen {
 	}
 }
 
-$ver = "1.7.4";
+$ver = "1.7.5";
 
 $files = array(
 	array('css', 'styles/app.css'),
