@@ -305,7 +305,7 @@ function removeVideo(id) {
 	if (!id) {
 		$('#remotes .videoContainer').remove();
 	} else {
-		$('#container_' + webrtc.getDomId(peer)).remove();
+		$('#container_' + id).remove();
 	}
 
 	playSound('user_leave');
@@ -671,7 +671,7 @@ function updateRemoteVolume(vol) {
 }
 
 function initVolumeControl() {
-	var volArray = [0, .01, .05, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1];
+	var volArray = [0, 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
 	var volCurrent = LS.get('remote_volume') || 1;
 
 	$('#volumeSelector').empty();
@@ -746,7 +746,15 @@ function initButtons(){
 	});
 
 	$('#tlb-full').unbind('click').on('click', function(){
-		if (screenfull.enabled) {
+		if (typeof window.speakup_client != 'undefined') {
+			if (window.speakup_client.isFullScreen) {
+				window.speakup_client.disableFullScreen();
+				$(this).removeClass('active').addClass('inactive');
+			} else {
+				window.speakup_client.enableFullScreen();
+				$(this).removeClass('inactive').addClass('active');
+			}
+		} else if (screenfull.enabled) {
 			if (screenfull.isFullscreen) {
 				screenfull.exit();
 				$(this).removeClass('active').addClass('inactive');
@@ -812,9 +820,8 @@ function initButtons(){
 		location.href = "speakup://" + $('#loginRoom').val();
 	});
 
-	if (navigator.userAgent.indexOf("SpeakUPClient") != -1) {
+	if (typeof window.speakup_client != 'undefined') {
 		$('#msgUseClient').hide();
-		$('#tlb-full').hide();
 	}
 
 	$('#tlb-screen').unbind('click').on('click', function() {
