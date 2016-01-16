@@ -22,6 +22,7 @@ var alertsCount = 0;
 var localVideoActive = true;
 var initFailed = false;
 var settingsNeedReload = false;
+var scMode = (typeof window.speakupClient != 'undefined');
 
 // call configuration
 var Config = {
@@ -177,8 +178,10 @@ function fixSpecialSymbols(text, onlyLatin){
 function msgIfEmpty(){
 	if (videoCount == 0){
 		$('#message').html('This room is empty').fadeIn('fast');
+		if (scMode) window.speakupClient.disableCallMode();
 	} else {
 		$('#message').fadeOut('fast');
+		if (scMode) window.speakupClient.enableCallMode();
 	}
 }
 
@@ -474,12 +477,15 @@ function prepareCall() {
 
 	// local p2p/ice failure
 	webrtc.on('iceFailed', function (peer) {
-		console.log('local fail', peer);
+		console.log('local fail', peer, webrtc.getDomId(peer));
+		removeVideo(webrtc.getDomId(peer));
+		playSound('error');
 	});
 
 	// remote p2p/ice failure
 	webrtc.on('connectivityError', function (peer) {
 		console.log('remote fail');
+		playSound('error');
 	});
 
 	// log every callback
@@ -746,7 +752,7 @@ function initButtons(){
 	});
 
 	$('#tlb-full').unbind('click').on('click', function(){
-		if (typeof window.speakupClient != 'undefined') {
+		if (scMode) {
 			if (window.speakupClient.isFullScreen) {
 				window.speakupClient.disableFullScreen();
 				$(this).removeClass('active').addClass('inactive');
@@ -820,7 +826,7 @@ function initButtons(){
 		location.href = "speakup://" + $('#loginRoom').val();
 	});
 
-	if (typeof window.speakupClient != 'undefined') {
+	if (scMode) {
 		$('#msgUseClient').hide();
 	}
 
