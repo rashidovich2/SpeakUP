@@ -124,6 +124,9 @@ function alert(text, type, timeout){
 
 function playSound(name){
 	var snd = new Audio(Config.staticPath + "/apps/speakup/sounds/" + name + ".ogg");
+	var volCurrent = LS.get('remote_volume') || 1;
+
+	snd.volume = volCurrent;
 	snd.play();
 }
 
