@@ -22,7 +22,7 @@ var alertsCount = 0;
 var localVideoActive = true;
 var initFailed = false;
 var settingsNeedReload = false;
-var scMode = (typeof window.speakupClient != 'undefined');
+var scMode = (typeof speakupClient != 'undefined');
 
 // call configuration
 var Config = {
@@ -178,16 +178,16 @@ function fixSpecialSymbols(text, onlyLatin){
 function msgIfEmpty(){
 	if (videoCount == 0){
 		$('#message').html('This room is empty').fadeIn('fast');
-		if (scMode) window.speakupClient.disableCallMode();
+		if (scMode) speakupClient.disableCallMode();
 	} else {
 		$('#message').fadeOut('fast');
-		if (scMode) window.speakupClient.enableCallMode();
+		if (scMode) speakupClient.enableCallMode();
 	}
 }
 
 // parse chat/action messages
-function addChatMsg(data, toMyself){
-	if (data.type === 'chat'){
+function addChatMsg(data, toMyself) {
+	if (data.type === 'chat') {
 		var msg = fixSpecialSymbols(data.payload.message);
 		if (msg.length == 0) return;
 		$('#chatlog').prepend("<div class='message'><b>" + fixSpecialSymbols(data.payload.nick) + "</b><br/>" + msg + "</div>");
@@ -198,10 +198,10 @@ function addChatMsg(data, toMyself){
 		return;
 	}
 
-	if (data.type === 'youtube'){
+	if (data.type === 'youtube') {
 		var actLink = data.payload.link;
 		var ytId = actLink.match(/(v=|embed\/)([a-zA-Z0-9\-_]*)/);
-		if (!(ytId != null && ytId[2])){
+		if (!(ytId != null && ytId[2])) {
 			$('#chatlog').prepend("<div class='message'><b>" + fixSpecialSymbols(data.payload.nick) + "</b><br/>Sent bad YouTube link!</div>");
 			return;
 		}
@@ -219,22 +219,22 @@ function addChatMsg(data, toMyself){
 		return;
 	}
 
-	if (data.type === 'screamer'){
+	if (data.type === 'screamer') {
 		var scId = data.payload.id;
 		if (!LS.get('disable_screamers')) {
 			playSound('scream' + scId);
 		}
 
 		var showDelay = 6000;
-		switch (scId){
+		switch (scId) {
 			case 1: showDelay = 6000; break;
 			case 2: showDelay = 4500; break;
 		}
 
-		setTimeout(function(){
+		setTimeout(function() {
 			$('#screamer').attr('src', Config.staticPath + '/apps/speakup/images/screamer' + scId + '.jpg');
 			$('#screamer').show();
-			setTimeout(function(){
+			setTimeout(function() {
 				$('#screamer').fadeOut('fast');
 			}, 4000);
 		}, showDelay);
@@ -243,7 +243,7 @@ function addChatMsg(data, toMyself){
 	}
 }
 
-function submitLoginForm(){
+function submitLoginForm() {
 	var userNick = $('#loginNick').val();
 	var userNick = fixSpecialSymbols(userNick, true);
 
@@ -270,7 +270,7 @@ function submitLoginForm(){
 	systemInit();
 }
 
-function generateRandom(typeGen){
+function generateRandom(typeGen) {
     var adjectives = ['autumn', 'hidden', 'bitter', 'misty', 'silent', 'empty', 'dry', 'dark', 'summer', 'icy', 'delicate', 'quiet', 'white', 'cool', 'spring', 'winter', 'patient', 'twilight', 'dawn', 'crimson', 'wispy', 'weathered', 'blue', 'billowing', 'broken', 'cold', 'falling', 'frosty', 'green', 'long', 'late', 'lingering', 'bold', 'little', 'morning', 'muddy', 'old', 'red', 'rough', 'still', 'small', 'sparkling', 'shy', 'wandering', 'withered', 'wild', 'black', 'young', 'holy', 'solitary', 'fragrant', 'aged', 'snowy', 'proud', 'floral', 'restless', 'divine', 'polished', 'ancient', 'purple', 'lively', 'nameless'];
 
     var nouns = ['waterfall', 'river', 'breeze', 'moon', 'rain', 'wind', 'sea', 'morning', 'snow', 'lake', 'sunset', 'pine', 'shadow', 'leaf', 'dawn', 'glitter', 'forest', 'hill', 'cloud', 'meadow', 'sun', 'glade', 'bird', 'brook', 'butterfly', 'bush', 'dew', 'dust', 'field', 'fire', 'flower', 'firefly', 'feather', 'grass', 'haze', 'mountain', 'night', 'pond', 'darkness', 'snowflake', 'silence', 'sound', 'sky', 'shape', 'surf', 'thunder', 'violet', 'water', 'wildflower', 'wave', 'water', 'resonance', 'sun', 'wood', 'dream', 'cherry', 'tree', 'fog', 'frost', 'voice', 'paper', 'frog', 'smoke', 'star'];
@@ -298,7 +298,7 @@ function showLoginWindow() {
 	$('#loader .spinner').hide();
 	$('.modal').slideUp('fast');
 	$('#loginWindow').slideDown('fast');
-	$('#loginForm').unbind('submit').on('submit', function(e){
+	$('#loginForm').unbind('submit').on('submit', function(e) {
 		e.preventDefault();
 		submitLoginForm();
 	});
@@ -311,7 +311,7 @@ function removeVideo(id, error) {
 		$('#container_' + id).remove();
 	}
 
-	if (error)
+	if (error) {
 		playSound('error');
 	} else {
 		playSound('user_leave');
@@ -333,11 +333,11 @@ function prepareCall() {
 	var selectedAudioDevice = LS.get("device_audio") || false;
 	var selectedVideoDevice = LS.get("device_video") || false;
 
-	if (!selectedAudioDevice){
+	if (!selectedAudioDevice) {
 		selectedAudioDevice = (audioDevices[0] && audioDevices[0].deviceId) ? audioDevices[0].deviceId : false;
 	}
 
-	if (!selectedVideoDevice){
+	if (!selectedVideoDevice) {
 		selectedVideoDevice = (audioDevices[0] && audioDevices[0].deviceId) ? audioDevices[0].deviceId : false;
 	}
 
@@ -424,14 +424,14 @@ function prepareCall() {
 
 	$('#localNick').text(webrtc.config.nick);
 
-	webrtc.on('readyToCall', function () {
-		if (Config.room){
+	webrtc.on('readyToCall', function() {
+		if (Config.room) {
 			setRoom();
 			webrtc.joinRoom(Config.room);
 		}
 	});
 
-	webrtc.on('channelMessage', function (peer, label, data) {
+	webrtc.on('channelMessage', function(peer, label, data) {
 		if (data.type == 'volume') {
 			showVolume(document.getElementById('status_' + webrtc.getDomId(peer)), data.volume);
 		}
@@ -442,7 +442,7 @@ function prepareCall() {
 	});
 
 	webrtc.on('videoAdded', function (video, peer) {
-		if (videoCount <= 3){
+		if (videoCount <= 3) {
 			videoCount++;
 			var remotes = document.getElementById('remotes');
 			if (remotes) {
@@ -520,15 +520,15 @@ function prepareCall() {
 	if (typeof ga == 'function') { ga('send', 'event', 'speakup', 'callready'); }
 }
 
-function enableScreamers(enable){
+function enableScreamers(enable) {
 	if (initFailed) return;
 	var enable = enable || false;
-	if (enable){
+	if (enable) {
 		LS.set('easter', 1);
 		alert("Screamers are now available", 'info');
 	}
 
-	if (LS.get('easter') == 1){
+	if (LS.get('easter') == 1) {
 		$('#chat-sc').removeClass('hidden');
 	}
 }
@@ -537,7 +537,7 @@ function setRoom(onlyLocation) {
 	var onlyLocation = onlyLocation || false;
 
 	var newUrl = location.origin + '/c/' + Config.room;
-	if (location.href != newUrl){
+	if (location.href != newUrl) {
 		history.replaceState({foo: 'bar'}, null, newUrl);
 	}
 
@@ -548,10 +548,10 @@ function setRoom(onlyLocation) {
 	$('#createRoom').remove();
 	$('#overlay').data('tooltip', "SpeakUP v" + $('body').data('version') + "<br/>&copy; LinkSoft.cf");
 	initTooltips('#overlay');
-	$('#tlb-share').unbind('click').click(function(){
+	$('#tlb-share').unbind('click').click(function() {
 		$('.modal').slideUp('fast');
 		$('#modal-back').fadeIn('fast');
-		$('#shareWindow').slideDown('fast', function(){
+		$('#shareWindow').slideDown('fast', function() {
 			$('#shareRoomLink').val(location.origin + '/c/' + Config.room);
 			$('#shareRoomLink').select().focus();
 		});
@@ -563,10 +563,10 @@ function setRoom(onlyLocation) {
 	msgIfEmpty();
 }
 
-function submitMsg(){
+function submitMsg() {
 	var ptext = $('#compose-input').val();
 
-	if (matches = ptext.match(/^\/command (screamer_enable|screamer_nomore)/)){
+	if (matches = ptext.match(/^\/command (screamer_enable|screamer_nomore)/)) {
 		egg = matches[1];
 		if (egg && egg == 'screamer_enable') {
 			enableScreamers(true);
@@ -582,7 +582,7 @@ function submitMsg(){
 		return;
 	}
 
-	if (ptext != ""){
+	if (ptext != "") {
 		var dPayload = {nick: webrtc.config.nick, message: ptext};
 		webrtc.sendToAll("chat", dPayload);
 		var data = {
@@ -598,15 +598,15 @@ function submitMsg(){
 	$('#compose-input').focus();
 }
 
-function oldBrowser(){
+function oldBrowser() {
 	$('#message').html("Your browser is unable to initialize WebRTC, please update or use another browser").fadeIn('fast');
 	$('body').removeClass('active').addClass('loading');
 	$('#loader .spinner').hide();
 	if (typeof ga == 'function') { ga('send', 'event', 'speakup', 'oldbrowser'); }
 }
 
-function checkCapabilities(){
-	if (!webrtc.capabilities.supportGetUserMedia){
+function checkCapabilities() {
+	if (!webrtc.capabilities.supportGetUserMedia) {
 		oldBrowser();
 	}
 
@@ -633,19 +633,19 @@ function checkCapabilities(){
 	enumerateDevices();
 }
 
-function showChat(){
+function showChat() {
 	$('#chat').animate({'margin-right': '0'});
 	$('#alert-container').animate({'margin-right': '330px'});
 	$('#tlb-chat').removeClass('inactive').addClass('active');
 }
 
-function hideChat(){
+function hideChat() {
 	$('#chat').animate({'margin-right': '-100%'});
 	$('#alert-container').animate({'margin-right': '0'});
 	$('#tlb-chat').removeClass('active').addClass('inactive');
 }
 
-function sendScreamer(scId){
+function sendScreamer(scId) {
 	var scId = scId || Math.floor(Math.random() * 2) + 1;
 	var dPayload = {id: scId};
 	webrtc.sendToAll("screamer", dPayload);
@@ -663,7 +663,7 @@ function sendScreamer(scId){
 		.removeClass('active')
 		.addClass('inactive');
 
-	setTimeout(function(){
+	setTimeout(function() {
 		$('#chat-sc')
 			.removeAttr('disabled')
 			.removeClass('inactive')
@@ -674,7 +674,7 @@ function sendScreamer(scId){
 
 function updateRemoteVolume(vol) {
 	LS.set('remote_volume', vol);
-	$('#remotes video').each(function(){
+	$('#remotes video').each(function() {
 		$(this).get(0).volume = vol;
 	});
 }
@@ -694,22 +694,22 @@ function initVolumeControl() {
 	}
 }
 
-function initButtons(){
+function initButtons() {
 	if (initFailed) return;
 
-	$('#chat-go').unbind('click').click(function(e){
+	$('#chat-go').unbind('click').click(function(e) {
 		e.preventDefault();
 		submitMsg();
 	});
 
-	$('#compose-input').unbind('keypress').on('keypress', function(e){
-		if (e.keyCode == 13){
+	$('#compose-input').unbind('keypress').on('keypress', function(e) {
+		if (e.keyCode == 13) { // enter
 			e.preventDefault();
 			submitMsg();
 		}
 	});
 
-	$('#chat-sc').unbind('click').click(function(e){
+	$('#chat-sc').unbind('click').click(function(e) {
 		e.preventDefault();
 		var a = confirm("Do you really want to send screamer?");
 		if (!a) return false;
@@ -717,12 +717,12 @@ function initButtons(){
 		sendScreamer();
 	});
 
-	$('#chat-yt').unbind('click').click(function(e){
+	$('#chat-yt').unbind('click').click(function(e) {
 		e.preventDefault();
 
 		var plink = prompt("Enter link to YouTube video:", "");
 
-		if (plink != "" && plink != null){
+		if (plink != "" && plink != null) {
 			var dPayload = {nick: webrtc.config.nick, link: plink};
 			webrtc.sendToAll("youtube", dPayload);
 			var data = {
@@ -734,15 +734,15 @@ function initButtons(){
 		}
 	});
 
-	$('#chat-toggle,#tlb-chat').unbind('click').click(function(){
-		if ($('#chat').css('margin-right') == '0' || $('#chat').css('margin-right') == '0px'){
+	$('#chat-toggle,#tlb-chat').unbind('click').click(function() {
+		if (parseInt($('#chat').css('margin-right') == 0)) {
 			hideChat();
 		} else {
 			showChat();
 		}
 	});
 
-	$('#tlb-cam').unbind('click').on('click', function(){
+	$('#tlb-cam').unbind('click').on('click', function() {
 		if (localVideoActive) {
 			localVideoActive = false;
 			webrtc.pauseVideo();
@@ -754,13 +754,13 @@ function initButtons(){
 		}
 	});
 
-	$('#tlb-full').unbind('click').on('click', function(){
+	$('#tlb-full').unbind('click').on('click', function() {
 		if (scMode) {
-			if (window.speakupClient.isFullScreen) {
-				window.speakupClient.disableFullScreen();
+			if (speakupClient.isFullScreen) {
+				speakupClient.disableFullScreen();
 				$(this).removeClass('active').addClass('inactive');
 			} else {
-				window.speakupClient.enableFullScreen();
+				speakupClient.enableFullScreen();
 				$(this).removeClass('inactive').addClass('active');
 			}
 		} else if (screenfull.enabled) {
@@ -774,19 +774,19 @@ function initButtons(){
 		}
 	});
 
-	$('#prefsCancel').unbind('click').on('click', function(e){
+	$('#prefsCancel').unbind('click').on('click', function(e) {
 		e.preventDefault();
 		$('#modal-back').fadeOut('fast');
 		$('#preferencesWindow').slideUp('fast');
 	});
 
-	$('#shareClose').unbind('click').click(function(e){
+	$('#shareClose').unbind('click').click(function(e) {
 		e.preventDefault();
 		$('#modal-back').fadeOut('fast');
 		$('#shareWindow').slideUp('fast');
 	});
 
-	$('#preferencesForm').unbind('submit').on('submit', function(e){
+	$('#preferencesForm').unbind('submit').on('submit', function(e) {
 		e.preventDefault();
 		LS.set("device_audio", $('#audioDeviceSelector').val());
 		LS.set("device_video", $('#videoDeviceSelector').val());
@@ -803,14 +803,14 @@ function initButtons(){
 		}
 	});
 
-	$('#tlb-pref').unbind('click').click(function(e){
+	$('#tlb-pref').unbind('click').click(function(e) {
 		e.preventDefault();
 		$('.modal').slideUp('fast');
 		$('#modal-back').fadeIn('fast');
 		$('#preferencesWindow').slideDown('fast');
 	});
 
-	$('#toolbar button').unbind('focus').on('focus', function(){
+	$('#toolbar button').unbind('focus').on('focus', function() {
 		$('#compose-input').focus();
 	});
 
@@ -860,12 +860,21 @@ function initButtons(){
 function initTooltips(selector) {
 	if (initFailed) return;
 	var selector = selector || '[data-tooltip]';
-	$(selector).each(function(){
-		var tip = new Tooltip($(this).data('tooltip'), { auto: 1, spacing: 15, effectClass: 'slide', inClass: 'in' });
-		$(this).unbind('mouseenter').on('mouseenter', function(){
+	$(selector).each(function() {
+		var tip = new Tooltip (
+			$(this).data('tooltip'), {
+				auto: 1,
+				spacing: 15,
+				effectClass: 'slide',
+				inClass: 'in'
+			}
+		);
+
+		$(this).unbind('mouseenter').on('mouseenter', function() {
 			tip.show($(this).get(0));
 		});
-		$(this).unbind('mousedown mouseleave').on('mousedown mouseleave', function(){
+
+		$(this).unbind('mousedown mouseleave').on('mousedown mouseleave', function() {
 			tip.hide();
 		});
 	});
@@ -906,7 +915,7 @@ function cacheResources() {
 
 function systemInit() {
 	initFailed = false;
-	enumerateDevices(function(){
+	enumerateDevices(function() {
 		injectElements();
 		initVolumeControl();
 		enableScreamers();
@@ -917,12 +926,12 @@ function systemInit() {
 	});
 }
 
-$(document).ready(function(){
-	setTimeout(function(){
+$(document).ready(function() {
+	setTimeout(function() {
 		systemInit();
 	}, 700);
 });
 
-$(window).resize(function(){
-
-});
+// $(window).resize(function() {
+//
+// });
