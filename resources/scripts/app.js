@@ -16,7 +16,6 @@ var LS = {
 }
 
 // grab the room from the URL
-// var roomInAddr = location.search && location.search.split('?')[1].match("room=([a-zA-Z0-9\-_]{2,})");
 var roomInAddr = location.pathname && location.pathname.match("/c/([a-zA-Z0-9\-_]{2,})");
 var videoCount = 0;
 var alertsCount = 0;
@@ -27,7 +26,8 @@ var settingsNeedReload = false;
 // call configuration
 var Config = {
 	nick: '',
-	room: ''
+	room: '',
+	staticPath: ''
 }
 
 // create our webrtc connection
@@ -746,12 +746,12 @@ function initButtons(){
 	});
 
 	$('#tlb-full').unbind('click').on('click', function(){
-		if (typeof window.speakup_client != 'undefined') {
-			if (window.speakup_client.isFullScreen) {
-				window.speakup_client.disableFullScreen();
+		if (typeof window.speakupClient != 'undefined') {
+			if (window.speakupClient.isFullScreen) {
+				window.speakupClient.disableFullScreen();
 				$(this).removeClass('active').addClass('inactive');
 			} else {
-				window.speakup_client.enableFullScreen();
+				window.speakupClient.enableFullScreen();
 				$(this).removeClass('inactive').addClass('active');
 			}
 		} else if (screenfull.enabled) {
@@ -820,7 +820,7 @@ function initButtons(){
 		location.href = "speakup://" + $('#loginRoom').val();
 	});
 
-	if (typeof window.speakup_client != 'undefined') {
+	if (typeof window.speakupClient != 'undefined') {
 		$('#msgUseClient').hide();
 	}
 
