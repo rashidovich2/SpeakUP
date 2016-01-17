@@ -222,7 +222,10 @@ trackStat("SpeakUP", $ver, "start");
 		<!-- Fixes for NodeJS - Electron Integration -->
 		<script>
 			if (typeof require !== 'undefined') {
-				window.nodeRequire = require;
+				window.node = {};
+				window.node.require = require;
+				window.node.ipcRenderer = require('electron').ipcRenderer;
+
 				delete window.require;
 				delete window.exports;
 				delete window.module;

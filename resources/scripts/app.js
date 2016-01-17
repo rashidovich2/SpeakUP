@@ -22,7 +22,8 @@ var alertsCount = 0;
 var localVideoActive = true;
 var initFailed = false;
 var settingsNeedReload = false;
-var scMode = (typeof speakupClient != 'undefined');
+var scMode = (typeof window.speakupClient != 'undefined'); // Client for C#
+var snMode = (typeof window.node != 'undefined'); // Client for Electron
 
 // call configuration
 var Config = {
@@ -181,10 +182,10 @@ function fixSpecialSymbols(text, onlyLatin){
 function msgIfEmpty(){
 	if (videoCount == 0){
 		$('#message').html('This room is empty').fadeIn('fast');
-		if (scMode) speakupClient.disableCallMode();
+		if (scMode || snMode) speakupClient.disableCallMode();
 	} else {
 		$('#message').fadeOut('fast');
-		if (scMode) speakupClient.enableCallMode();
+		if (scMode || snMode) speakupClient.enableCallMode();
 	}
 }
 
@@ -626,6 +627,8 @@ function checkCapabilities() {
 					alert("Can't start screen sharing without extension", "error");
 				});
 			});
+		} else if (snMode) {
+			// that's ok, it's an electron launcher
 		} else {
 			// oh, that's a firefox
 			$('#tlb-screen').unbind('click');
@@ -832,13 +835,22 @@ function initButtons() {
 		location.href = "speakup://" + $('#loginRoom').val();
 	});
 
-	if (scMode) {
+	if (scMode || snMode) {
 		$('#msgUseClient').hide();
 	}
 
 	$('#tlb-screen').unbind('click').on('click', function() {
-		if (webrtc.getLocalScreen()) {
+		if (!snMode && webrtc.getLocalScreen()) {
 			webrtc.stopScreenShare();
+			alert("Screen sharing is now disabled", 'info');
+			$('#tlb-screen').removeClass('active').addClass('inactive');
+		} else if (snMode && webrtc.getLocalScreen())
+			webrtc.stopScreenShare();
+			if (webrtc.webrtc.localScreen && webrtc.webrtc.localScreen.getTracks().length > 0) {
+				for (var i = 0; i < webrtc.webrtc.localScreen.getTracks().length; i++) {
+					webrtc.webrtc.localScreen.getTracks()[i].stop();
+				}
+			}
 			alert("Screen sharing is now disabled", 'info');
 			$('#tlb-screen').removeClass('active').addClass('inactive');
 		} else {
@@ -901,6 +913,26 @@ function injectElements() {
 	}
 
 	Config.staticPath = $('body').data('static');
+
+	if (snMode) {
+		window.speakupClient = {
+			disableCallMode: function(){
+				node.ipcRenderer.send('call-mode-change', 'disable');
+			},
+
+			enableCallMode: function(){
+				node.ipcRenderer.send('call-mode-change', 'enable');
+			}
+		}
+
+		if (!window.chrome) {
+			window.chrome = {};
+		}
+
+		window.chrome = {
+			webstore: false
+		}
+	}
 }
 
 function cacheResources() {
