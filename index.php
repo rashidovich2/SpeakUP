@@ -219,6 +219,17 @@ trackStat("SpeakUP", $ver, "start");
 		</div>
 		<!-- end: TOOLBAR -->
 
+		<!-- Fixes for NodeJS - Electron Integration -->
+		<script>
+			if (typeof require !== 'undefined') {
+				window.nodeRequire = require;
+				delete window.require;
+				delete window.exports;
+				delete window.module;
+			}
+		</script>
+		<!-- end: Fixes for NodeJS - Electron Integration -->
+
 		<!-- Google Analytics -->
 		<script>
 			(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -232,7 +243,7 @@ trackStat("SpeakUP", $ver, "start");
 		<!-- END: Google Analytics -->
 
 		<!-- JS LIBS -->
-		<script src='//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js'></script>
+		<script src='https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js'></script>
 		<?=$code->javascript?>
 		<!-- end: JS LIBS -->
 	</body>

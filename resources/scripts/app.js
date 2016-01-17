@@ -738,7 +738,7 @@ function initButtons() {
 	});
 
 	$('#chat-toggle,#tlb-chat').unbind('click').click(function() {
-		if (parseInt($('#chat').css('margin-right') == 0)) {
+		if (parseInt($('#chat').css('margin-right')) == 0) {
 			hideChat();
 		} else {
 			showChat();
