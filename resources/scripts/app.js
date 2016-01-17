@@ -844,7 +844,7 @@ function initButtons() {
 			webrtc.stopScreenShare();
 			alert("Screen sharing is now disabled", 'info');
 			$('#tlb-screen').removeClass('active').addClass('inactive');
-		} else if (snMode && webrtc.getLocalScreen())
+		} else if (snMode && webrtc.getLocalScreen()) {
 			webrtc.stopScreenShare();
 			if (webrtc.webrtc.localScreen && webrtc.webrtc.localScreen.getTracks().length > 0) {
 				for (var i = 0; i < webrtc.webrtc.localScreen.getTracks().length; i++) {
