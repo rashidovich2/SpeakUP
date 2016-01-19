@@ -19,7 +19,7 @@ var LS = {
 var roomInAddr = location.pathname && location.pathname.match("/c/([a-zA-Z0-9\-_]{2,})");
 var videoCount = 0;
 var alertsCount = 0;
-var localVideoActive = true;
+var muteActive = false;
 var initFailed = false;
 var settingsNeedReload = false;
 var scMode = (typeof window.speakupClient != 'undefined'); // Client for C#
@@ -121,6 +121,53 @@ function alert(text, type, timeout){
 	}
 
 	return true;
+}
+
+// sliders
+var Slider = {
+	moving: false,
+
+	setSliderPos: function(event, sender, callback) {
+		var value = parseFloat(event.offsetX/$(sender).width());
+		value = (value < 0.1) ? 0 : ((value > 0.9) ? 1 : value);
+
+		var percent = Math.round(value * 100);
+		$(sender).children('.slider-pos').css('left', percent + '%');
+
+		if (callback) {
+			callback(value);
+		}
+	},
+
+	initVolumeSlider: function() {
+		var owner = this;
+		var volCurrent = (LS.get('remote_volume') || 1) * 100;
+
+		$('#newVolumeControl').removeClass('hidden');
+		$('#sliderPosOwner').children('.slider-pos').css('left', volCurrent + '%');
+		$('#sliderPosOwner').unbind('mousedown mouseup mousemove');
+		$('#sliderPosOwner').on('mousedown', function(e){
+			if (e.button == 0) {
+				$(this).addClass('active');
+				owner.moving = true;
+			}
+		});
+
+		$('#sliderPosOwner').on('mousemove', function(e){
+			if (owner.moving) {
+				owner.setSliderPos(e, this, updateRemoteVolume);
+			}
+		});
+
+		$('#sliderPosOwner').on('mouseup mouseleave mouseout', function(e){
+			if (owner.moving) {
+				owner.setSliderPos(e, this, updateRemoteVolume);
+			};
+
+			$(this).removeClass('active');
+			owner.moving = false;
+		});
+	}
 }
 
 function playSound(name){
@@ -748,15 +795,17 @@ function initButtons() {
 		}
 	});
 
-	$('#tlb-cam').unbind('click').on('click', function() {
-		if (localVideoActive) {
-			localVideoActive = false;
+	$('#tlb-pause').unbind('click').on('click', function() {
+		if (!muteActive) {
+			muteActive = true;
 			webrtc.pauseVideo();
-			$(this).removeClass('active').addClass('inactive');
-		} else {
-			localVideoActive = true;
-			webrtc.resumeVideo();
+			webrtc.mute();
 			$(this).removeClass('inactive').addClass('active');
+		} else {
+			muteActive = false;
+			webrtc.resumeVideo();
+			webrtc.unmute();
+			$(this).removeClass('active').addClass('inactive');
 		}
 	});
 

@@ -50,7 +50,7 @@ class CodeGen {
 	}
 }
 
-$ver = "1.7.5";
+$ver = "1.7.6";
 
 $files = array(
 	array('css', 'styles/app.css'),
@@ -133,6 +133,14 @@ trackStat("SpeakUP", $ver, "start");
 					<div><label for='volumeSelector'>Volume </label></div>
 					<div><select id='volumeSelector'></select></div>
 				</div>
+				<div class='row hidden' id='newVolumeControl'>
+					<div><label>Volume Slider </label></div>
+					<div>
+						<div class='slider'>
+							<div class='slider-pos' id='volumePos'></div>
+						</div>
+					</div>
+				</div>
 				<div class='row'>
 					<div><label for='videoDeviceSelector'>Video Device </label></div>
 					<div><select id='videoDeviceSelector'></select></div>
@@ -193,8 +201,8 @@ trackStat("SpeakUP", $ver, "start");
 
 		<!-- TOOLBAR -->
 		<div id='toolbar' class='btn-group'>
-			<button id='tlb-cam' data-tooltip='Toggle Video' class='active'>
-				<i class='icon icon-video icon-fw icon-xl'></i>
+			<button id='tlb-pause' data-tooltip='Toggle Pause (mute mic &amp; disable video)' class='inactive'>
+				<i class='icon icon-pause icon-fw icon-xl'></i>
 			</button>
 
 			<button id='tlb-screen' data-tooltip='Toggle Screen Share' class='inactive'>
