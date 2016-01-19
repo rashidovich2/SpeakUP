@@ -133,11 +133,11 @@ trackStat("SpeakUP", $ver, "start");
 					<div><label for='volumeSelector'>Volume </label></div>
 					<div><select id='volumeSelector'></select></div>
 				</div>
-				<div class='row hidden' id='newVolumeControl'>
+				<div class='row'>
 					<div><label>Volume Slider </label></div>
 					<div>
-						<div class='slider'>
-							<div class='slider-pos' id='volumePos'></div>
+						<div class='slider' id='sliderVolume'>
+							<div class='slider-pos'></div>
 						</div>
 					</div>
 				</div>

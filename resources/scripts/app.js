@@ -144,22 +144,22 @@ var Slider = {
 		var volCurrent = (LS.get('remote_volume') || 1) * 100;
 
 		$('#newVolumeControl').removeClass('hidden');
-		$('#sliderPosOwner').children('.slider-pos').css('left', volCurrent + '%');
-		$('#sliderPosOwner').unbind('mousedown mouseup mousemove');
-		$('#sliderPosOwner').on('mousedown', function(e){
+		$('#sliderVolume').children('.slider-pos').css('left', volCurrent + '%');
+		$('#sliderVolume').unbind('mousedown mouseup mousemove');
+		$('#sliderVolume').on('mousedown', function(e){
 			if (e.button == 0) {
 				$(this).addClass('active');
 				owner.moving = true;
 			}
 		});
 
-		$('#sliderPosOwner').on('mousemove', function(e){
+		$('#sliderVolume').on('mousemove', function(e){
 			if (owner.moving) {
 				owner.setSliderPos(e, this, updateRemoteVolume);
 			}
 		});
 
-		$('#sliderPosOwner').on('mouseup mouseleave mouseout', function(e){
+		$('#sliderVolume').on('mouseup mouseleave mouseout', function(e){
 			if (owner.moving) {
 				owner.setSliderPos(e, this, updateRemoteVolume);
 			};
@@ -919,6 +919,8 @@ function initButtons() {
 	$('#videoDeviceSelector,#audioDeviceSelector,#videoDeviceQuality').on('change', function() {
 		settingsNeedReload = true;
 	});
+
+	Slider.initVolumeSlider();
 }
 
 function initTooltips(selector) {
