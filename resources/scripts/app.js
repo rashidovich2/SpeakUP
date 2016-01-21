@@ -131,7 +131,7 @@ var Slider = {
 		var value = parseFloat(event.offsetX/$(sender).width());
 		value = (value < 0.1) ? 0 : ((value > 0.9) ? 1 : value);
 
-		var percent = Math.round(value * 100);
+		var percent = value * 100;
 		$(sender).children('.slider-pos').css('left', percent + '%');
 
 		if (callback) {
@@ -542,6 +542,12 @@ function prepareCall() {
 		playSound('error');
 	});
 
+	// update time and status
+	webrtc.on('updateData', function (peer) {
+		console.log('remote fail');
+		playSound('error');
+	});
+
 	// log every callback
 	webrtc.on('*', function (evtType, evtData) {
 		var loggable = ['localMediaError'];
@@ -567,6 +573,8 @@ function prepareCall() {
 	if (parseFloat(LS.get('dj_mode_vol')) > 0) {
 		$('#globalAudio').get(0).volume = parseFloat(LS.get('dj_mode_vol'));
 	}
+
+	InfoPull.requestUpdate();
 
 	if (typeof ga == 'function') { ga('send', 'event', 'speakup', 'callready'); }
 }
@@ -996,6 +1004,27 @@ function cacheResources() {
 	for (var i = 0; i < imageFiles.length; i++) {
 		var img = new Image();
 		img.src = Config.staticPath + '/apps/speakup/images/' + imageFiles[i] + '.jpg';
+	}
+}
+
+var InfoPull = {
+	requestUpdate: function() {
+		if (Config.room && !initFailed) {
+			webrtc.connection.emit("updatedata");
+		}
+
+		this.delayUpdate();
+	},
+
+	parseUpdate: function(data) {
+		console.log(data);
+	},
+
+	delayUpdate: function() {
+		var owner = this;
+		setTimeout(function() {
+			owner.requestUpdate();
+		}, 30000);
 	}
 }
 
