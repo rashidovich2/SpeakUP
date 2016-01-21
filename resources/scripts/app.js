@@ -292,6 +292,21 @@ function addChatMsg(data, toMyself) {
 
 		return;
 	}
+
+	if (data.type === 'updateData') {
+		if (!(data.response && data.response.clients)) {
+			return;
+		}
+
+		for (var i = 0; i < data.response.length; i++) {
+			console.log(
+				"Client ",
+				data.response.clients[i].id,
+				" is online since: ",
+				data.response.clients[i].joinedAt
+			);
+		}
+	}
 }
 
 function submitLoginForm() {
@@ -538,12 +553,6 @@ function prepareCall() {
 
 	// remote p2p/ice failure
 	webrtc.on('connectivityError', function (peer) {
-		console.log('remote fail');
-		playSound('error');
-	});
-
-	// update time and status
-	webrtc.on('updateData', function (peer) {
 		console.log('remote fail');
 		playSound('error');
 	});
