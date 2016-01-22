@@ -298,14 +298,29 @@ function addChatMsg(data, toMyself) {
 			return;
 		}
 
-		for (var i = 0; i < data.response.length; i++) {
+		var newVideoCount = 0;
+
+		for (var item in data.response.clients) {
+			var client = data.response.clients[item];
+			var videoInfo = data.videoInfo.clients[item];
+
+			if (client.id != webrtc.connection.connection.id) {
+				if (videoInfo.video === true) { newVideoCount++; }
+				if (videoInfo.screen === true) { newVideoCount++; }
+			}
+
+			console.log(data, client, newVideoCount);
+
 			console.log(
 				"Client ",
-				data.response.clients[i].id,
+				client.id,
 				" is online since: ",
-				data.response.clients[i].joinedAt
+				client.joinedAt
 			);
 		}
+
+		// videoCount = newVideoCount;
+		resizeRemotes();
 	}
 }
 
@@ -508,28 +523,24 @@ function prepareCall() {
 	});
 
 	webrtc.on('videoAdded', function (video, peer) {
-		if (videoCount <= 3) {
-			videoCount++;
-			var remotes = document.getElementById('remotes');
-			if (remotes) {
-				var d = document.createElement('div');
-				d.className = 'videoContainer fade-in';
-				d.id = 'container_' + webrtc.getDomId(peer);
-				var v = document.createElement('div');
-				v.className = 'statusPanel noselect';
-				v.innerHTML = "<div id='status_" + webrtc.getDomId(peer) + "' class='statusVol'></div>";
-				v.innerHTML+= "<div id='nick_" + webrtc.getDomId(peer) + "' class='statusNick'>" + (peer.nick || "Unknown") + "</div>";
-				// v.id = 'status_' + webrtc.getDomId(peer);
-				video.volume = LS.get('remote_volume') || 1;
-				d.appendChild(v);
-				d.appendChild(video);
-				remotes.appendChild(d);
-				playSound('user_join');
-				resizeRemotes();
-				msgIfEmpty();
-			}
-		} else {
-			console.log('video add failed: max peers count', peer);
+		videoCount++;
+		var remotes = document.getElementById('remotes');
+		if (remotes) {
+			var d = document.createElement('div');
+			d.className = 'videoContainer fade-in';
+			d.id = 'container_' + webrtc.getDomId(peer);
+			var v = document.createElement('div');
+			v.className = 'statusPanel noselect';
+			v.innerHTML = "<div id='status_" + webrtc.getDomId(peer) + "' class='statusVol'></div>";
+			v.innerHTML+= "<div id='nick_" + webrtc.getDomId(peer) + "' class='statusNick'>" + (peer.nick || "Unknown") + "</div>";
+			// v.id = 'status_' + webrtc.getDomId(peer);
+			video.volume = LS.get('remote_volume') || 1;
+			d.appendChild(v);
+			d.appendChild(video);
+			remotes.appendChild(d);
+			playSound('user_join');
+			resizeRemotes();
+			msgIfEmpty();
 		}
 	});
 
@@ -1019,7 +1030,7 @@ function cacheResources() {
 var InfoPull = {
 	requestUpdate: function() {
 		if (Config.room && !initFailed) {
-			webrtc.connection.emit("updatedata");
+			webrtc.connection.emit("updateData");
 		}
 
 		this.delayUpdate();

@@ -201,7 +201,7 @@ trackStat("SpeakUP", $ver, "start");
 
 		<!-- TOOLBAR -->
 		<div id='toolbar' class='btn-group'>
-			<button id='tlb-pause' data-tooltip='Toggle Pause (mute mic &amp; disable video)' class='inactive'>
+			<button id='tlb-pause' data-tooltip='Pause Your Audio/Video' class='inactive'>
 				<i class='icon icon-pause icon-fw icon-xl'></i>
 			</button>
 
