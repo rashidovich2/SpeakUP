@@ -50,7 +50,7 @@ class CodeGen {
 	}
 }
 
-$ver = "1.7.6";
+$ver = "1.7.8";
 
 $files = array(
 	array('css', 'styles/app.css'),
@@ -101,7 +101,7 @@ trackStat("SpeakUP", $ver, "start");
 				<h3>Login information</h3>
 				<form id='loginForm'>
 					<div class='row'>
-						<div><label for='loginNick'>Your Nickname </label></div>
+						<div><label for='loginNick'>Nickname </label></div>
 						<div><input type='text' id='loginNick' placeholder='Nickname' required pattern='([a-zA-Z0-9\-_]{1,})'/></div>
 					</div>
 					<div class='row'>
@@ -118,6 +118,11 @@ trackStat("SpeakUP", $ver, "start");
 					<a href='javascript:'>Join via SpeakUP Client</a>
 				</div>
 			</div>
+			<div id='fatalError' class='modal'>
+				<h3>Fatal error</h3>
+				<div id='fatalErrorText'></div>
+				<button class='btn' id='fatalErrorRetry'>Try again</button>
+			</div>
 		</div>
 		<!-- end: LOADING AND LOGIN SCREEN -->
 
@@ -130,16 +135,8 @@ trackStat("SpeakUP", $ver, "start");
 					<div><select id='audioDeviceSelector'></select></div>
 				</div>
 				<div class='row'>
-					<div><label for='volumeSelector'>Volume </label></div>
-					<div><select id='volumeSelector'></select></div>
-				</div>
-				<div class='row'>
-					<div><label>Volume Slider </label></div>
-					<div>
-						<div class='slider' id='sliderVolume'>
-							<div class='slider-pos'></div>
-						</div>
-					</div>
+					<div><label for='sliderVolume'>Audio Volume </label></div>
+					<div><input type='range' min='0' max='1' step='0.05' id='sliderVolume' class='trackbar' /></div>
 				</div>
 				<div class='row'>
 					<div><label for='videoDeviceSelector'>Video Device </label></div>
@@ -168,7 +165,7 @@ trackStat("SpeakUP", $ver, "start");
 		<!-- end: MODAL WINDOWS -->
 
 		<!-- VIDEOS -->
-		<div id='message' class='statusWindow noselect'></div>
+		<div id='message' class='noselect'></div>
 
 		<div class='videoContainer' id='ownVideo'>
 			<div class='statusPanel noselect'>
@@ -254,7 +251,7 @@ trackStat("SpeakUP", $ver, "start");
 		<!-- END: Google Analytics -->
 
 		<!-- JS LIBS -->
-		<script src='https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js'></script>
+		<script src='https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js'></script>
 		<?=$code->javascript?>
 		<!-- end: JS LIBS -->
 	</body>

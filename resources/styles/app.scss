@@ -1,4 +1,4 @@
-@import "css3", "loading", "font", "tooltip";
+@import "css3", "loading", "font", "tooltip", "trackbar", "rainbow";
 
 @mixin maximizeElement {
 	position: fixed;
@@ -161,10 +161,38 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 /* end: inputs */
 
 .videoContainer {
+	width: 100%;
+	height: 100%;
+	
 	video {
 		width: 100%;
 		height: 100%;
-		background: #000;
+	}
+}
+
+.videoContainerSelected {
+	position: fixed !important;
+	top: 0 !important;
+	left: 0 !important;
+	width: 100% !important;
+	height: 100% !important;
+	background: #000;
+	min-width: initial !important;
+	min-height: initial !important;
+	max-width: none !important;
+	max-height: none !important;
+	z-index: 4 !important;
+	text-align: center;
+	
+	video {
+		min-width: initial !important;
+		min-height: initial !important;
+		max-width: none !important;
+		max-height: none !important;
+		width: 100% !important;
+		height: 100% !important;
+		border: 0 !important;
+		box-shadow: none !important;
 	}
 }
 
@@ -173,18 +201,34 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 	bottom: 2px;
 	left: 5px;
 	z-index: 2;
+
+	width: initial;
+	height: initial;
 }
 
 #remotes {
 	z-index: 1;
+	display: flex;
+	height: 100%;
+	width: 100%;
+	position: fixed;
+	top: 0;
+	left: 0;
+	flex-direction: row;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: stretch;
+	align-content: stretch;
 
 	.videoContainer {
+		/*
 		@include maximizeElement();
-		background: #000;
-		max-height: auto !important;
-		margin: 0;
+		*/
+		margin: auto;
 		display: inline-block;
 		text-align: center;
+		flex: 1;
+		background: #000;
 	}
 }
 
@@ -200,13 +244,16 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 }
 
 .statusPanel {
-	@include transformTranslate(-50%, 0);
 	position: absolute;
-	top: 10px;
-	left: 50%;
-	z-index: 10;
 	display: flex;
-	opacity: .7;
+	opacity: .4;
+	
+	background: rgba(0, 0, 0, .7);
+	border: 1px solid #999;
+	margin: 5px;
+	padding: 5px 10px;
+	z-index: 1;
+	@include transition(.2s opacity);
 
 	.statusVol {
 		@include transition(.2s background-color, .2s box-shadow);
@@ -221,6 +268,14 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 		color: #fff;
 		text-shadow: 0 0 2px #000;
 	}
+}
+
+.videoContainer.muted .statusPanel .statusNick {
+	text-decoration: line-through;
+}
+
+.videoContainer:hover .statusPanel, .videoContainerSelected .statusPanel{
+	opacity: 1;
 }
 
 #chat {
@@ -238,6 +293,7 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 	margin-right: -100%;
 	z-index: 2;
 	box-shadow: 0 0 5px 1px #000;
+	@include transition('.2s padding-top');
 
 	.message {
 		border-bottom: 1px solid #ccc;
@@ -259,7 +315,7 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 
 	#chat-toggle {
 		position: absolute;
-		top: 15px;
+		margin-top: 15px;
 		right: 20px;
 		font-size: 14px;
 		border: 1px solid #777;
@@ -284,23 +340,6 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 	height: 50px;
 }
 
-.statusWindow {
-	@include transformTranslate(-50%, 0);
-	position: fixed;
-	top: 15px;
-	left: 50%;
-	max-width: 400px;
-	width: 90%;
-	background: #cef;
-	border: 1px solid #79a;
-	padding: 20px;
-	box-shadow: 0 0 3px;
-
-	h1 {
-		margin: 0 0 5px 0;
-	}
-}
-
 #loader {
 	@include transformTranslate(-50%, -50%);
 	position: fixed;
@@ -314,6 +353,10 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 		background-size: contain;
 		margin: 0 auto;
 	}
+	
+	.modal {
+		margin-top: 20px;
+	}
 }
 
 .active {
@@ -324,10 +367,26 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 
 #message {
 	display: none;
-	z-index: 6;
-	background: #fda linear-gradient(#fda, #db9);
-	border-color: #522;
+	z-index: 3;
 	text-align: center;
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	background: #fda linear-gradient(#fda, #db9);
+	border-bottom: 1px solid #522;
+	padding: 10px;
+	box-shadow: 0 0 3px;
+
+	h1 {
+		margin: 0 0 5px 0;
+	}
+}
+
+body.messagePadding {
+	#chat {
+		padding-top: 40px;
+	}
 }
 
 #alert-container {
@@ -365,6 +424,13 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 	@include maximizeElement();
 	display: none;
 	z-index: 4;
+}
+
+#rainbow {
+	@include maximizeElement();
+	display: none;
+	z-index: 4;
+	opacity: .5;
 }
 
 .tooltip {
@@ -405,47 +471,26 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 	}
 }
 
-.slider {
-	height: 10px;
-    border: 1px solid #135;
-    margin-top: 10px !important;
-    padding: 0 4px;
-    border-radius: 5px;
-    background: #9ab linear-gradient(#7ac, #acf);
-	cursor: default;
-
-	.slider-pos {
-		width: 16px;
-		height: 16px;
-		border-radius: 50%;
-		margin: -4px;
-		background: #135 linear-gradient(#135, #247);
-		left: 100%;
-		position: relative;
-		touch-action: none;
-    	pointer-events: none;
-	}
-}
-
-.slider.active {
-	cursor: e-resize;
-
-	.slider-pos {
-		box-shadow: inset 0 0 3px #fff;
-	}
-}
-
 #preferencesWindow, #shareWindow {
-	@include transformTranslate(-50%, 0);
+	@include transformTranslate(-50%, -50%);
 	position: fixed;
-	bottom: 90px;
+	top: 50%;
 	left: 50%;
-	width: 400px;
+	width: 600px;
 	max-width: 95%;
 }
 
-#loginWindow {
-	margin-top: 20px;
+#fatalError {
+	display: none;
+	
+	#fatalErrorText {
+		text-align: center;
+	}
+	
+	button {
+		width: 100%;
+		margin: 1em 0 0 0;
+	}
 }
 
 #modal-back {
@@ -458,13 +503,18 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 .modal {
 	display: none;
 	background: #fff;
-    padding: 10px;
+    padding: 15px;
     border-radius: 5px;
 	z-index: 5;
+	box-shadow: 0 0 10px #ace;
 
 	h3 {
-		margin: 0 0 15px 0;
+		margin: -15px -15px 15px -15px;
 		text-align: center;
+		border-radius: 5px 5px 0 0;
+		padding: 8px;
+		background: #135;
+		color: #fff;
 	}
 }
 

@@ -24,6 +24,7 @@ var initFailed = false;
 var settingsNeedReload = false;
 var scMode = (typeof window.speakupClient != 'undefined'); // Client for C#
 var snMode = (typeof window.node != 'undefined'); // Client for Electron
+var initFailedTimer;
 
 // call configuration
 var Config = {
@@ -62,6 +63,7 @@ function enumerateDevices(callback){
 
 			for (var i = 0; i !== devices.length; ++i) {
 				var sourceInfo = devices[i];
+				
 				if (sourceInfo.kind === 'audioinput') {
 					sourceInfo.label = (sourceInfo.label && sourceInfo.label.length > 0) ? sourceInfo.label : 'Microphone #' + (audioDevices.length + 1);
 					audioDevices.push(sourceInfo);
@@ -123,53 +125,6 @@ function alert(text, type, timeout){
 	return true;
 }
 
-// sliders
-var Slider = {
-	moving: false,
-
-	setSliderPos: function(event, sender, callback) {
-		var value = parseFloat(event.offsetX/$(sender).width());
-		value = (value < 0.1) ? 0 : ((value > 0.9) ? 1 : value);
-
-		var percent = value * 100;
-		$(sender).children('.slider-pos').css('left', percent + '%');
-
-		if (callback) {
-			callback(value);
-		}
-	},
-
-	initVolumeSlider: function() {
-		var owner = this;
-		var volCurrent = (LS.get('remote_volume') || 1) * 100;
-
-		$('#newVolumeControl').removeClass('hidden');
-		$('#sliderVolume').children('.slider-pos').css('left', volCurrent + '%');
-		$('#sliderVolume').unbind('mousedown mouseup mousemove');
-		$('#sliderVolume').on('mousedown', function(e){
-			if (e.button == 0) {
-				$(this).addClass('active');
-				owner.moving = true;
-			}
-		});
-
-		$('#sliderVolume').on('mousemove', function(e){
-			if (owner.moving) {
-				owner.setSliderPos(e, this, updateRemoteVolume);
-			}
-		});
-
-		$('#sliderVolume').on('mouseup mouseleave mouseout', function(e){
-			if (owner.moving) {
-				owner.setSliderPos(e, this, updateRemoteVolume);
-			};
-
-			$(this).removeClass('active');
-			owner.moving = false;
-		});
-	}
-}
-
 function playSound(name){
 	var snd = new Audio(Config.staticPath + "/apps/speakup/sounds/" + name + ".ogg");
 	var volCurrent = LS.get('remote_volume') || 1;
@@ -200,6 +155,8 @@ function showVolume(el, volume) {
 }
 
 function resizeRemotes(){
+	return ;
+	// obsolete, replaced with flexbox
 	var percentWidth;
 	switch (videoCount-1){
 		case 0: percentWidth = 100; break;
@@ -226,14 +183,48 @@ function fixSpecialSymbols(text, onlyLatin){
 	}
 }
 
+var messageBanner = {
+	show: function(text) {
+		$('#message').html(text).slideDown('fast');
+		$('body').addClass('messagePadding');
+	},
+	
+	hide: function() {
+		$('#message').slideUp('fast', function() {
+			$(this).html('');
+		});
+		
+		$('body').removeClass('messagePadding');
+	},
+	
+	fatal: function(text) {
+		$('#fatalErrorText').html(text);
+		$('#fatalError').slideDown('fast');
+	}
+}
+
 function msgIfEmpty(){
 	if (videoCount == 0){
-		$('#message').html('This room is empty').fadeIn('fast');
+		messageBanner.show('This room is empty');
 		if (scMode || snMode) speakupClient.disableCallMode();
 	} else {
-		$('#message').fadeOut('fast');
+		messageBanner.hide();
 		if (scMode || snMode) speakupClient.enableCallMode();
 	}
+}
+
+function secondsToString(msec) {
+	// var totalSec = new Date().getUTCTime() / 1000;
+	// var hours = parseInt( totalSec / 3600 ) % 24;
+	// var minutes = parseInt( totalSec / 60 ) % 60;
+	// var seconds = parseInt(totalSec % 60);
+	var tDate = new Date(msec);
+	
+	var hours =   parseInt(tDate.getUTCHours());
+	var minutes = parseInt(tDate.getUTCMinutes());
+    var seconds = parseInt(tDate.getUTCSeconds());
+	
+	return (hours == 0 ? '' : ((hours < 10 ? "0" + hours : hours) + ":")) + (minutes < 10 ? "0" + minutes : minutes) + ":" + (seconds  < 10 ? "0" + seconds : seconds);
 }
 
 // parse chat/action messages
@@ -273,22 +264,35 @@ function addChatMsg(data, toMyself) {
 	if (data.type === 'screamer') {
 		var scId = data.payload.id;
 		if (!LS.get('disable_screamers')) {
-			playSound('scream' + scId);
+			if (scId === 1 || scId === 2) {
+				playSound('scream' + scId);
+			}
 		}
 
 		var showDelay = 6000;
 		switch (scId) {
 			case 1: showDelay = 6000; break;
 			case 2: showDelay = 4500; break;
+			case 3: showDelay = 4500; break;
 		}
 
-		setTimeout(function() {
-			$('#screamer').attr('src', Config.staticPath + '/apps/speakup/images/screamer' + scId + '.jpg');
-			$('#screamer').show();
+		if (scId === 3) {
 			setTimeout(function() {
-				$('#screamer').fadeOut('fast');
-			}, 4000);
-		}, showDelay);
+				$('#rainbow').addClass('rainbow').show();
+				playSound('rainbow');
+				setTimeout(function() {
+					$('#rainbow').removeClass('rainbow').hide();
+				}, 5000);
+			}, showDelay);
+		} else {
+			setTimeout(function() {
+				$('#screamer').attr('src', Config.staticPath + '/apps/speakup/images/screamer' + scId + '.jpg');
+				$('#screamer').show();
+				setTimeout(function() {
+					$('#screamer').fadeOut('fast');
+				}, 4000);
+			}, showDelay);
+		}
 
 		return;
 	}
@@ -303,20 +307,30 @@ function addChatMsg(data, toMyself) {
 		for (var item in data.response.clients) {
 			var client = data.response.clients[item];
 			var videoInfo = data.videoInfo.clients[item];
+			var timeDiff = data.serverTime - client.joinedAt;
+			
+			console.log(data);
 
 			if (client.id != webrtc.connection.connection.id) {
 				if (videoInfo.video === true) { newVideoCount++; }
 				if (videoInfo.screen === true) { newVideoCount++; }
+				
+				console.log(
+					"Client ",
+					client.id,
+					" is online since: ",
+					client.joinedAt,
+					" for ",
+					secondsToString(timeDiff)
+				);
+			} else {
+				console.log(
+					"You are online since: ",
+					client.joinedAt,
+					" for ",
+					secondsToString(timeDiff)
+				);
 			}
-
-			console.log(data, client, newVideoCount);
-
-			console.log(
-				"Client ",
-				client.id,
-				" is online since: ",
-				client.joinedAt
-			);
 		}
 
 		// videoCount = newVideoCount;
@@ -372,6 +386,8 @@ function generateRandom(typeGen) {
 function showLoginWindow() {
 	var nick = (!Config.nick || Config.nick.length == 0) ? generateRandom('nick') : Config.nick;
 	var room = (!Config.room || Config.room.length <= 1) ? generateRandom('room') : Config.room;
+	
+	clearTimeout(initFailedTimer);
 
 	$('#loginNick').val(nick);
 	$('#loginRoom').val(room);
@@ -535,6 +551,10 @@ function prepareCall() {
 			v.innerHTML+= "<div id='nick_" + webrtc.getDomId(peer) + "' class='statusNick'>" + (peer.nick || "Unknown") + "</div>";
 			// v.id = 'status_' + webrtc.getDomId(peer);
 			video.volume = LS.get('remote_volume') || 1;
+			d.onclick = function() {
+				$(this).toggleClass('videoContainerSelected');
+			}
+			
 			d.appendChild(v);
 			d.appendChild(video);
 			remotes.appendChild(d);
@@ -556,6 +576,18 @@ function prepareCall() {
 	webrtc.on('volumeChange', function (volume, treshold) {
 		showVolume(document.getElementById('localStatus'), volume);
 	});
+	
+	webrtc.on('mute', function (data) {
+		webrtc.getPeers(data.id).forEach(function (peer) {
+			$('#container_' + webrtc.getDomId(peer)).addClass('muted');
+		});
+	});
+	
+	webrtc.on('unmute', function (data) {
+		webrtc.getPeers(data.id).forEach(function (peer) {
+			$('#container_' + webrtc.getDomId(peer)).removeClass('muted');
+		});
+	});
 
 	// local p2p/ice failure
 	webrtc.on('iceFailed', function (peer) {
@@ -571,7 +603,7 @@ function prepareCall() {
 	// log every callback
 	webrtc.on('*', function (evtType, evtData) {
 		var loggable = ['localMediaError'];
-		var showPreferences = ['DevicesNotFoundError', 'SourceUnavailableError']
+		var showPreferences = ['DevicesNotFoundError', 'SourceUnavailableError'];
 		if (loggable.indexOf(evtType) >= 0) {
 			if (showPreferences.indexOf(evtData.name) >= 0) {
 				$('.modal').slideUp('fast');
@@ -582,11 +614,16 @@ function prepareCall() {
 				$('#preferencesWindow').slideDown('fast');
 			} else {
 				console.log('event', evtType, evtData);
-				$('#message').html("SimpleWebRTC Reported error: " + evtType).fadeIn('fast');
+				if (evtType === 'localMediaError' && evtData.name === 'PermissionDeniedError') {
+					messageBanner.fatal("Please, allow microphone and webcam usage to continue");
+				} else {
+					messageBanner.show("SimpleWebRTC Reported error: " + evtType);
+				}
 			}
 
 			$('body').removeClass('active').addClass('loading');
 			$('#loader .spinner').hide();
+			clearTimeout(initFailedTimer);
 		}
 	});
 
@@ -639,6 +676,8 @@ function setRoom(onlyLocation) {
 	if (typeof ga == 'function') { ga('send', 'event', 'speakup', 'joinroom'); }
 
 	$('body').removeClass('loading').addClass('fade-in active');
+	clearTimeout(initFailedTimer);
+	
 	msgIfEmpty();
 }
 
@@ -678,7 +717,7 @@ function submitMsg() {
 }
 
 function oldBrowser() {
-	$('#message').html("Your browser is unable to initialize WebRTC, please update or use another browser").fadeIn('fast');
+	messageBanner.show("Your browser is unable to initialize WebRTC, please update or use another browser");
 	$('body').removeClass('active').addClass('loading');
 	$('#loader .spinner').hide();
 	if (typeof ga == 'function') { ga('send', 'event', 'speakup', 'oldbrowser'); }
@@ -727,7 +766,7 @@ function hideChat() {
 }
 
 function sendScreamer(scId) {
-	var scId = scId || Math.floor(Math.random() * 2) + 1;
+	var scId = scId || Math.floor(Math.random() * 3) + 1;
 	var dPayload = {id: scId};
 	webrtc.sendToAll("screamer", dPayload);
 	var data = {
@@ -754,6 +793,7 @@ function sendScreamer(scId) {
 }
 
 function updateRemoteVolume(vol) {
+	var vol = vol;
 	LS.set('remote_volume', vol);
 	$('#remotes video').each(function() {
 		$(this).get(0).volume = vol;
@@ -761,18 +801,8 @@ function updateRemoteVolume(vol) {
 }
 
 function initVolumeControl() {
-	var volArray = [0, 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
 	var volCurrent = LS.get('remote_volume') || 1;
-
-	$('#volumeSelector').empty();
-	for (var i = 0; i < volArray.length; i++) {
-		var volVal = volArray[i];
-		if (volCurrent == volVal) {
-			$('#volumeSelector').append("<option selected value='" + volVal + "'>" + (volVal * 100) + "%</option>");
-		} else {
-			$('#volumeSelector').append("<option value='" + volVal + "'>" + (volVal * 100) + "%</option>");
-		}
-	}
+	$('#sliderVolume').attr('value', volCurrent);
 }
 
 function initButtons() {
@@ -874,7 +904,8 @@ function initButtons() {
 		LS.set("device_audio", $('#audioDeviceSelector').val());
 		LS.set("device_video", $('#videoDeviceSelector').val());
 		LS.set("enable_hd", $('#videoDeviceQuality').prop('checked'));
-		updateRemoteVolume($('#volumeSelector').val());
+		// updateRemoteVolume($('#volumeSelector').val());
+		updateRemoteVolume($('#sliderVolume').val());
 		$('#preferencesWindow').fadeOut('fast');
 		if (settingsNeedReload) {
 			alert("Applying settings...", "info");
@@ -910,6 +941,10 @@ function initButtons() {
 
 	$('#msgUseClient>a').unbind('click').on('click', function() {
 		location.href = "speakup://" + $('#loginRoom').val();
+	});
+	
+	$('#fatalErrorRetry').unbind('click').on('click', function() {
+		location.reload();
 	});
 
 	if (scMode || snMode) {
@@ -947,8 +982,10 @@ function initButtons() {
 	$('#videoDeviceSelector,#audioDeviceSelector,#videoDeviceQuality').on('change', function() {
 		settingsNeedReload = true;
 	});
-
-	Slider.initVolumeSlider();
+	
+	$('#ownVideo').unbind('click').on('click', function() {
+		$(this).toggleClass('videoContainerSelected');
+	});
 }
 
 function initTooltips(selector) {
@@ -986,6 +1023,10 @@ function injectElements() {
 	if ($('#screamer').length == 0) {
 		$('body').append("<img id='screamer' alt='Screamer' src='data:image/gif;base64,R0lGODlhAQABAPAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=='/>");
 	}
+	
+	if ($('#rainbow').length == 0) {
+		$('body').append("<div id='rainbow'></div>");
+	}
 
 	if ($('#globalAudio').length == 0) {
 		$('body').append("<audio id='globalAudio'></audio>");
@@ -1015,7 +1056,7 @@ function injectElements() {
 }
 
 function cacheResources() {
-	var audioFiles = ['user_join', 'user_leave', 'message', 'error', 'scream1', 'scream2'];
+	var audioFiles = ['user_join', 'user_leave', 'message', 'error', 'scream1', 'scream2', 'rainbow'];
 	for (var i = 0; i < audioFiles.length; i++) {
 		var snd = new Audio(Config.staticPath + "/apps/speakup/sounds/" + audioFiles[i] + ".ogg");
 	}
@@ -1050,6 +1091,15 @@ var InfoPull = {
 
 function systemInit() {
 	initFailed = false;
+	initFailedTimer = setTimeout(function() {
+		initFailed = true;
+		$('body').removeClass('active').addClass('loading');
+		$('#loader .spinner').hide();
+		
+		messageBanner.hide();
+		messageBanner.fatal("Initialization failed due to timeout.<br/>Please, check if you've allowed usage of your microphone and web camera.");
+	}, 5000);
+	
 	enumerateDevices(function() {
 		injectElements();
 		initVolumeControl();
@@ -1064,9 +1114,5 @@ function systemInit() {
 $(document).ready(function() {
 	setTimeout(function() {
 		systemInit();
-	}, 700);
+	}, 400);
 });
-
-// $(window).resize(function() {
-//
-// });
