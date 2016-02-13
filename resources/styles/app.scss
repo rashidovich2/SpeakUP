@@ -487,6 +487,10 @@ body.messagePadding {
 		text-align: center;
 	}
 	
+	#fatalErrorSettings {
+		display: none;
+	}
+	
 	button {
 		width: 100%;
 		margin: 1em 0 0 0;
@@ -554,7 +558,8 @@ body.messagePadding {
 	#remotes,
 	#chat,
 	#overlay,
-	#toolbar {
+	#toolbar,
+	#prefsCancel {
 		display: none !important;
 	}
 }

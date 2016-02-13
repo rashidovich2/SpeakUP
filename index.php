@@ -50,7 +50,7 @@ class CodeGen {
 	}
 }
 
-$ver = "1.7.8";
+$ver = "1.8.0";
 
 $files = array(
 	array('css', 'styles/app.css'),
@@ -121,6 +121,7 @@ trackStat("SpeakUP", $ver, "start");
 			<div id='fatalError' class='modal'>
 				<h3>Fatal error</h3>
 				<div id='fatalErrorText'></div>
+				<button class='btn' id='fatalErrorSettings'>Settings</button>
 				<button class='btn' id='fatalErrorRetry'>Try again</button>
 			</div>
 		</div>

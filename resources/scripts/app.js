@@ -25,6 +25,7 @@ var settingsNeedReload = false;
 var scMode = (typeof window.speakupClient != 'undefined'); // Client for C#
 var snMode = (typeof window.node != 'undefined'); // Client for Electron
 var initFailedTimer;
+var currentTime = 1*(new Date());
 
 // call configuration
 var Config = {
@@ -197,7 +198,18 @@ var messageBanner = {
 		$('body').removeClass('messagePadding');
 	},
 	
-	fatal: function(text) {
+	fatal: function(text, showSettings) {
+		initFailed = true;
+		$('body').removeClass('active').addClass('loading');
+		$('#loader .spinner').hide();
+		clearTimeout(initFailedTimer);
+		
+		if (showSettings) {
+			$('#fatalErrorSettings').show();
+		} else {
+			$('#fatalErrorSettings').hide();
+		}
+		
 		$('#fatalErrorText').html(text);
 		$('#fatalError').slideDown('fast');
 	}
@@ -308,34 +320,52 @@ function addChatMsg(data, toMyself) {
 			var client = data.response.clients[item];
 			var videoInfo = data.videoInfo.clients[item];
 			var timeDiff = data.serverTime - client.joinedAt;
-			
-			console.log(data);
 
 			if (client.id != webrtc.connection.connection.id) {
 				if (videoInfo.video === true) { newVideoCount++; }
 				if (videoInfo.screen === true) { newVideoCount++; }
-				
-				console.log(
-					"Client ",
-					client.id,
-					" is online since: ",
-					client.joinedAt,
-					" for ",
-					secondsToString(timeDiff)
-				);
+				var contEl = getVideoByClId(client.id);
+
+				if (contEl) {
+					$('#container_' + contEl.id).data('time-joined', client.joinedAt)
+							 .addClass('timerEnabled');
+				}
 			} else {
-				console.log(
-					"You are online since: ",
-					client.joinedAt,
-					" for ",
-					secondsToString(timeDiff)
-				);
+				$('#ownVideo').data('time-joined', client.joinedAt)
+							  .addClass('timerEnabled');
 			}
 		}
+		
+		currentTime = data.serverTime;
 
 		// videoCount = newVideoCount;
 		resizeRemotes();
 	}
+}
+
+// returns id of container for peer (for timers)
+function getVideoByClId(id) {
+	var peers = webrtc.getPeers();
+	for (var i = 0; i < peers.length; i++) {
+		if (peers[i].id == id) {
+			return peers[i].videoEl;
+		}
+	}
+	
+	return false;
+}
+
+function updateCurrentTime() {
+	currentTime += 1000;
+}
+
+function updateTimers() {
+	$('.timerEnabled').each(function() {
+		var timeDiff = currentTime - 
+			parseInt($(this).data('time-joined'));
+			
+		$(this).children('.statusPanel').attr('title', "Online: " + secondsToString(timeDiff));
+	});
 }
 
 function submitLoginForm() {
@@ -630,6 +660,11 @@ function prepareCall() {
 	if (parseFloat(LS.get('dj_mode_vol')) > 0) {
 		$('#globalAudio').get(0).volume = parseFloat(LS.get('dj_mode_vol'));
 	}
+	
+	setInterval(function() {
+		updateCurrentTime();
+		updateTimers();
+	}, 1000);
 
 	InfoPull.requestUpdate();
 
@@ -679,6 +714,55 @@ function setRoom(onlyLocation) {
 	clearTimeout(initFailedTimer);
 	
 	msgIfEmpty();
+}
+
+function initVideoPermissions(callback, requestVideo) {
+	console.log("Permission Check Start");
+	if (initFailed) return;
+	var requestVideo = requestVideo || false;
+	
+	var gUM = navigator.getUserMedia ||
+                        navigator.webkitGetUserMedia ||
+                        navigator.mozGetUserMedia;
+
+	gUM({ audio: true, video: requestVideo },
+		function(stream) {
+			console.log(stream);
+			stream.active = false;
+		
+			stream.getTracks().forEach(function(track){
+				console.log(track);
+				track.stop();
+				track.enabled = false;
+			});
+			
+			stream.getTracks().forEach(function(track){
+				stream.removeTrack(track);
+			});
+			
+			if (callback) {
+				callback();
+			}
+		},
+		function(err) {
+			var errMessage = "";
+			var showSettings = false;
+			console.log(err);
+			switch (err.name) {
+				case "PermissionDismissedError": errMessage = "You've dismissed the request to share camera and microphone, reload page and allow usage."; break;
+				case "SecurityError": // firefox - denied or dismissed
+				case "PermissionDeniedError": errMessage = "You've denied the request to share camera and microphone. Please, allow usage and reload page."; break; // chrome - denied
+				case "SourceUnavailableError": messageBanner.show("Your camera is already in use by other application"); initVideoPermissions(function() { callback(); }, false); return; break;
+				default: errMessage = "Unknown error occurred while requesting permission for camera and microphone."; console.log(err);
+			}
+			
+			messageBanner.fatal(errMessage, showSettings);
+			
+			if (callback) {
+				callback();
+			}
+		}
+	);
 }
 
 function submitMsg() {
@@ -907,7 +991,7 @@ function initButtons() {
 		// updateRemoteVolume($('#volumeSelector').val());
 		updateRemoteVolume($('#sliderVolume').val());
 		$('#preferencesWindow').fadeOut('fast');
-		if (settingsNeedReload) {
+		if (settingsNeedReload || $('body').hasClass('loading')) {
 			alert("Applying settings...", "info");
 			setTimeout(function() {
 				location.reload();
@@ -917,7 +1001,7 @@ function initButtons() {
 		}
 	});
 
-	$('#tlb-pref').unbind('click').click(function(e) {
+	$('#tlb-pref,#fatalErrorSettings').unbind('click').click(function(e) {
 		e.preventDefault();
 		$('.modal').slideUp('fast');
 		$('#modal-back').fadeIn('fast');
@@ -1092,10 +1176,6 @@ var InfoPull = {
 function systemInit() {
 	initFailed = false;
 	initFailedTimer = setTimeout(function() {
-		initFailed = true;
-		$('body').removeClass('active').addClass('loading');
-		$('#loader .spinner').hide();
-		
 		messageBanner.hide();
 		messageBanner.fatal("Initialization failed due to timeout.<br/>Please, check if you've allowed usage of your microphone and web camera.");
 	}, 5000);
@@ -1107,7 +1187,9 @@ function systemInit() {
 		cacheResources();
 		initButtons();
 		initTooltips();
-		prepareCall();
+		initVideoPermissions(function() {
+			prepareCall();
+		}, true);
 	});
 }
 
