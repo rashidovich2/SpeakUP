@@ -26,6 +26,10 @@ var scMode = (typeof window.speakupClient != 'undefined'); // Client for C#
 var snMode = (typeof window.node != 'undefined'); // Client for Electron
 var initFailedTimer;
 var currentTime = 1*(new Date());
+var unreadMessages = 0;
+var chatVisible = false;
+var notificationTimeout = 3000;
+var callModeEnabled = false;
 
 // call configuration
 var Config = {
@@ -100,10 +104,6 @@ function alert(text, type, timeout){
 	alertsCount++;
 	if (type=='error') type='danger';
 
-	if ($('#alert-container').length == 0) {
-		$('body').append("<div id='alert-container'></div>");
-	}
-
 	$('#alert-container').append("<div class='alert alert-" + type +
 									"' id='alert-" + alertsCount +
 									"' style='display:none'>" + text + "</div>");
@@ -124,6 +124,62 @@ function alert(text, type, timeout){
 	}
 
 	return true;
+}
+
+var NotificationWrapper = function (argTitle, argText) {
+	var title = argTitle;
+	var text = argText;
+	var timeout = notificationTimeout;
+	
+	var sendIpc = function() {
+		var msg = {
+			title : title,
+			message : text,
+			detail: '',
+			width: 400,
+			timeout : timeout,
+			focus: true
+		};
+
+		node.ipcRenderer.send('electron-toaster-message', msg);
+	}
+	
+	var sendBrowser = function() {
+		if (Notification.permission === 'granted') {
+			var notification = new Notification(title, {
+				body: text
+			});
+			
+			setTimeout(function(){
+				notification.close();
+			}, timeout);
+		} else if (Notification.permission !== 'denied') {
+			Notification.requestPermission(function (permission) {
+				if (permission === 'granted') {
+					sendBrowser();
+				} else {
+					sendAlert();
+				}
+			});
+		}
+	}
+	
+	var sendAlert = function() {
+		alert(title + "<br/>" + text, 'info', timeout);
+	}
+	
+	var sendAutoDetect = function() {
+		if (snMode) {
+			sendIpc();
+		} else if (typeof Notification !== 'undefined') {
+			sendBrowser();
+		} else {
+			// browser, why are you so IE?
+			sendAlert();
+		}
+	}
+	
+	sendAutoDetect();
 }
 
 function playSound(name){
@@ -153,24 +209,6 @@ function showVolume(el, volume) {
 		el.style.backgroundColor = '#f00';
 		el.style.boxShadow = '0 0 15px 1px #f00';
 	}
-}
-
-function resizeRemotes(){
-	return ;
-	// obsolete, replaced with flexbox
-	var percentWidth;
-	switch (videoCount-1){
-		case 0: percentWidth = 100; break;
-		case 1: percentWidth = 50; break;
-		case 2: percentWidth = 33; break;
-		default: percentWidth = 25; break;
-	}
-
-	var currentVid = 0;
-	$('#remotes .videoContainer').each(function(){
-		$(this).css({width: percentWidth + '%', left: (currentVid)*percentWidth + '%'});
-		currentVid++;
-	});
 }
 
 function fixSpecialSymbols(text, onlyLatin){
@@ -218,18 +256,22 @@ var messageBanner = {
 function msgIfEmpty(){
 	if (videoCount == 0){
 		messageBanner.show('This room is empty');
-		if (scMode || snMode) speakupClient.disableCallMode();
+		if (scMode || snMode) {
+			speakupClient.disableCallMode();
+		} else {
+			callModeEnabled = false;
+		}
 	} else {
 		messageBanner.hide();
-		if (scMode || snMode) speakupClient.enableCallMode();
+		if (scMode || snMode) {
+			speakupClient.enableCallMode();
+		} else {
+			callModeEnabled = true;
+		}
 	}
 }
 
 function secondsToString(msec) {
-	// var totalSec = new Date().getUTCTime() / 1000;
-	// var hours = parseInt( totalSec / 3600 ) % 24;
-	// var minutes = parseInt( totalSec / 60 ) % 60;
-	// var seconds = parseInt(totalSec % 60);
 	var tDate = new Date(msec);
 	
 	var hours =   parseInt(tDate.getUTCHours());
@@ -248,6 +290,7 @@ function addChatMsg(data, toMyself) {
 		if (!toMyself) {
 			playSound('message');
 			alert("New message from " + fixSpecialSymbols(data.payload.nick) + ":<br/>" + fixSpecialSymbols(data.payload.message), 'info');
+			setUnreadMessages(unreadMessages + 1);
 		}
 		return;
 	}
@@ -269,6 +312,7 @@ function addChatMsg(data, toMyself) {
 		if (!toMyself) {
 			playSound('message');
 			alert("New video from " + fixSpecialSymbols(data.payload.nick) + "<br/>(open chat to see it)", 'info');
+			setUnreadMessages(unreadMessages + 1);
 		}
 		return;
 	}
@@ -337,9 +381,6 @@ function addChatMsg(data, toMyself) {
 		}
 		
 		currentTime = data.serverTime;
-
-		// videoCount = newVideoCount;
-		resizeRemotes();
 	}
 }
 
@@ -364,7 +405,8 @@ function updateTimers() {
 		var timeDiff = currentTime - 
 			parseInt($(this).data('time-joined'));
 			
-		$(this).children('.statusPanel').attr('title', "Online: " + secondsToString(timeDiff));
+		// $(this).children('.statusPanel').attr('title', "Online: " + secondsToString(timeDiff));
+		$(this).find('.statusTime').html(secondsToString(timeDiff));
 	});
 }
 
@@ -445,7 +487,6 @@ function removeVideo(id, error) {
 	}
 
 	videoCount--;
-	resizeRemotes();
 	msgIfEmpty();
 }
 
@@ -538,7 +579,7 @@ function prepareCall() {
 		autoRequestMedia: true,
 		debug: false,
 		detectSpeakingEvents: true,
-		autoAdjustMic: false,
+		autoAdjustMic: true,
 		url: "https://speakup.cf/",
 		nick: Config.nick,
 		media: mediaOptions,
@@ -577,8 +618,10 @@ function prepareCall() {
 			d.id = 'container_' + webrtc.getDomId(peer);
 			var v = document.createElement('div');
 			v.className = 'statusPanel noselect';
-			v.innerHTML = "<div id='status_" + webrtc.getDomId(peer) + "' class='statusVol'></div>";
-			v.innerHTML+= "<div id='nick_" + webrtc.getDomId(peer) + "' class='statusNick'>" + (peer.nick || "Unknown") + "</div>";
+			var peerId = webrtc.getDomId(peer);
+			v.innerHTML = "<div id='status_" + peerId + "' class='statusVol'></div>";
+			v.innerHTML+= "<div id='nick_" + peerId + "' class='statusNick'>" + (peer.nick || "Unknown") + "</div>";
+			v.innerHTML+= "<div id='time_" + peerId + "' class='statusTime'>00:00</div>";
 			// v.id = 'status_' + webrtc.getDomId(peer);
 			video.volume = LS.get('remote_volume') || 1;
 			d.onclick = function() {
@@ -589,9 +632,13 @@ function prepareCall() {
 			d.appendChild(video);
 			remotes.appendChild(d);
 			playSound('user_join');
-			resizeRemotes();
 			msgIfEmpty();
 		}
+		
+		
+		setTimeout(function() {
+			InfoPull.requestUpdate();
+		}, 200);
 	});
 
 	webrtc.on('videoRemoved', function (video, peer) {
@@ -666,8 +713,6 @@ function prepareCall() {
 		updateTimers();
 	}, 1000);
 
-	InfoPull.requestUpdate();
-
 	if (typeof ga == 'function') { ga('send', 'event', 'speakup', 'callready'); }
 }
 
@@ -727,11 +772,9 @@ function initVideoPermissions(callback, requestVideo) {
 
 	gUM({ audio: true, video: requestVideo },
 		function(stream) {
-			console.log(stream);
 			stream.active = false;
 		
 			stream.getTracks().forEach(function(track){
-				console.log(track);
 				track.stop();
 				track.enabled = false;
 			});
@@ -837,13 +880,31 @@ function checkCapabilities() {
 	enumerateDevices();
 }
 
+function setUnreadMessages(count) {
+	if (chatVisible) {
+		unreadMessages = 0;
+		$('#tlb-chat-unread').html('').hide();
+	} else {
+		unreadMessages = count;
+		if (count > 0) {
+			$('#tlb-chat-unread').html(count).show();
+		} else {
+			$('#tlb-chat-unread').html('').hide();
+		}
+	}
+}
+
 function showChat() {
+	chatVisible = true;
 	$('#chat').animate({'margin-right': '0'});
 	$('#alert-container').animate({'margin-right': '330px'});
 	$('#tlb-chat').removeClass('inactive').addClass('active');
+	
+	setUnreadMessages(0);
 }
 
 function hideChat() {
+	chatVisible = false;
 	$('#chat').animate({'margin-right': '-100%'});
 	$('#alert-container').animate({'margin-right': '0'});
 	$('#tlb-chat').removeClass('active').addClass('inactive');
@@ -930,7 +991,7 @@ function initButtons() {
 	});
 
 	$('#chat-toggle,#tlb-chat').unbind('click').click(function() {
-		if (parseInt($('#chat').css('margin-right')) == 0) {
+		if (chatVisible) {
 			hideChat();
 		} else {
 			showChat();
@@ -1099,6 +1160,10 @@ function injectElements() {
 	if ($('#modal-back').length == 0) {
 		$('body').append("<div id='modal-back'></div>");
 	}
+	
+	if ($('#alert-container').length == 0) {
+		$('body').append("<div id='alert-container'></div>");
+	}
 
 	if ($('#overlay').length == 0) {
 		$('body').append("<div id='overlay' class='noselect'></div>");
@@ -1197,4 +1262,12 @@ $(document).ready(function() {
 	setTimeout(function() {
 		systemInit();
 	}, 400);
+});
+
+$(window).on('beforeunload', function() {
+	if (callModeEnabled) {
+		return "You are currently in conference. Do you really want to close SpeakUP?";
+	} else {
+		
+	}
 });

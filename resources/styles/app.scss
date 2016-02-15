@@ -268,6 +268,13 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 		color: #fff;
 		text-shadow: 0 0 2px #000;
 	}
+	
+	.statusTime {
+		font-size: 10pt;
+		color: #ccc;
+		text-shadow: 0 0 2px #000;
+		margin-left: 5px;
+	}
 }
 
 .videoContainer.muted .statusPanel .statusNick {
@@ -453,6 +460,10 @@ body.messagePadding {
 		color: #fff;
 		text-shadow: 0 0 15px #000;
 		cursor: pointer;
+		
+		.tlb-text {
+			font-size: 130%;
+		}
 	}
 
 	button:hover {

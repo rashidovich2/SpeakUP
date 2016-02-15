@@ -50,7 +50,7 @@ class CodeGen {
 	}
 }
 
-$ver = "1.8.0";
+$ver = "1.8.1";
 
 $files = array(
 	array('css', 'styles/app.css'),
@@ -172,6 +172,7 @@ trackStat("SpeakUP", $ver, "start");
 			<div class='statusPanel noselect'>
 				<div id='localStatus' class='statusVol'></div>
 				<div id='localNick' class='statusNick'></div>
+				<div id='localTime' class='statusTime'>00:00</div>
 			</div>
 			<video id='localVideo'></video>
 		</div>
@@ -221,6 +222,7 @@ trackStat("SpeakUP", $ver, "start");
 
 			<button id='tlb-chat' data-tooltip='Toggle Chat' class='inactive'>
 				<i class='icon icon-chat icon-fw icon-xl'></i>
+				<span id='tlb-chat-unread' class='tlb-text'></span>
 			</button>
 		</div>
 		<!-- end: TOOLBAR -->
