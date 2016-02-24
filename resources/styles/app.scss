@@ -303,7 +303,20 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 	@include transition('.2s padding-top');
 
 	.message {
-		border-bottom: 1px solid #ccc;
+		border: 1px solid #ccc;
+		border-radius: 3px;
+		padding: 5px;
+		margin: 3px;
+	}
+	
+	.message-in {
+		@extend .message;
+		background: #cdd;
+	}
+	
+	.message-out {
+		@extend .message;
+		background: #dcd;
 	}
 
 	#compose {
@@ -318,6 +331,7 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 	#chatlog {
 		height: 100%;
 		overflow-y: auto;
+		margin-bottom: 5px;
 	}
 
 	#chat-toggle {
@@ -648,6 +662,14 @@ body.messagePadding {
 
 	.statusPanel {
 		zoom: .6;
+	}
+	
+	#alert-container {
+		position: fixed;
+		right: 0;
+		bottom: 0;
+		width: 100%;
+		max-width: 100%;
 	}
 }
 /* end: mobile version fixes */

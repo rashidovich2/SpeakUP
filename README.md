@@ -11,6 +11,17 @@ It uses peer-2-peer connection between clients to transmit audio/video (WebRTC p
 Not available at the moment
 
 ## Version History
+### 1.8.2
+* Event Logging System.
+* Fixes in detection of audio/video devices.
+* C# client is now deprecated.
+* Updated chat appearance.
+
+### 1.8.1
+* Updated style of online timer.
+* Added an amount of unread messages in chat on chat button.
+* Added confirmation on tab closing if there are still people in conference.
+
 ### 1.8.0
 * Changed the process of requesting access to webcam/microphone. Now it has to be more stable and also work not only in Chrome.
 * Added an indicator which show how long each participant is connected. It's available on hover on any nickname.

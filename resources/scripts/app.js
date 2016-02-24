@@ -1,4 +1,4 @@
-// localstorage wrapper
+// localStorage wrapper
 var LS = {
 	prefix: 'link_speakup_',
 
@@ -15,6 +15,32 @@ var LS = {
 	}
 }
 
+// Event Logger
+var EventLogger = {
+	enabled: true,
+	address: '/logger.php',
+	duplicateInGA: true,
+	
+	log: function(eventName) {
+		if (!eventName) return;
+		if (!this.enabled) return;
+		
+		$.ajax({
+			method: 'POST',
+			url: this.address,
+			data: {
+				'event': eventName,
+				'ver': Config.version
+			},
+			dataType: 'json'
+		});
+		
+		if (typeof ga == 'function' && this.duplicateInGA) {
+			ga('send', 'event', 'speakup', eventName);
+		}
+	}
+}
+
 // grab the room from the URL
 var roomInAddr = location.pathname && location.pathname.match("/c/([a-zA-Z0-9\-_]{2,})");
 var videoCount = 0;
@@ -22,12 +48,10 @@ var alertsCount = 0;
 var muteActive = false;
 var initFailed = false;
 var settingsNeedReload = false;
-var scMode = (typeof window.speakupClient != 'undefined'); // Client for C#
 var snMode = (typeof window.node != 'undefined'); // Client for Electron
 var initFailedTimer;
 var currentTime = 1*(new Date());
 var unreadMessages = 0;
-var chatVisible = false;
 var notificationTimeout = 3000;
 var callModeEnabled = false;
 
@@ -46,6 +70,26 @@ var audioDevices = [], videoDevices = [];
 
 // detecting all media devices
 function enumerateDevices(callback){
+	var fixLabel = function(sourceInfo, num) {
+		if (sourceInfo.deviceId === 'default') {
+			return "System Default";
+		}
+		
+		if (sourceInfo.deviceId === 'communications') {
+			return "Default Device for Communication";
+		}
+		
+		if (sourceInfo.kind === 'audioinput' && sourceInfo.label.length === 0) {
+			return "Microphone #" + num;
+		}
+		
+		if (sourceInfo.kind === 'videoinput' && sourceInfo.label.length === 0) {
+			return "Camera #" + num;
+		}
+		
+		return (sourceInfo.label) ? sourceInfo.label : "Device #" + num;
+	}
+	
 	if (initFailed) return;
 
 	audioDevices = [];
@@ -70,22 +114,22 @@ function enumerateDevices(callback){
 				var sourceInfo = devices[i];
 				
 				if (sourceInfo.kind === 'audioinput') {
-					sourceInfo.label = (sourceInfo.label && sourceInfo.label.length > 0) ? sourceInfo.label : 'Microphone #' + (audioDevices.length + 1);
+					sourceInfo.labelMod = fixLabel(sourceInfo, audioDevices.length + 1);
 					audioDevices.push(sourceInfo);
 
 					if (selectedAudioDevice && selectedAudioDevice == sourceInfo.deviceId) {
-						$('#audioDeviceSelector').append("<option selected value='" + sourceInfo.deviceId + "'>" + sourceInfo.label + "</option>");
+						$('#audioDeviceSelector').append("<option selected value='" + sourceInfo.deviceId + "'>" + sourceInfo.labelMod + "</option>");
 					} else {
-						$('#audioDeviceSelector').append("<option value='" + sourceInfo.deviceId + "'>" + sourceInfo.label + "</option>");
+						$('#audioDeviceSelector').append("<option value='" + sourceInfo.deviceId + "'>" + sourceInfo.labelMod + "</option>");
 					}
 				} else if (sourceInfo.kind === 'videoinput') {
-					sourceInfo.label = (sourceInfo.label && sourceInfo.label.length > 0) ? sourceInfo.label : 'Camera #' + (audioDevices.length + 1);
+					sourceInfo.labelMod = fixLabel(sourceInfo, audioDevices.length + 1);
 					videoDevices.push(sourceInfo);
 
 					if (selectedVideoDevice && selectedVideoDevice == sourceInfo.deviceId) {
-						$('#videoDeviceSelector').append("<option selected value='" + sourceInfo.deviceId + "'>" + sourceInfo.label + "</option>");
+						$('#videoDeviceSelector').append("<option selected value='" + sourceInfo.deviceId + "'>" + sourceInfo.labelMod + "</option>");
 					} else {
-						$('#videoDeviceSelector').append("<option value='" + sourceInfo.deviceId + "'>" + sourceInfo.label + "</option>");
+						$('#videoDeviceSelector').append("<option value='" + sourceInfo.deviceId + "'>" + sourceInfo.labelMod + "</option>");
 					}
 				}
 			}
@@ -256,14 +300,14 @@ var messageBanner = {
 function msgIfEmpty(){
 	if (videoCount == 0){
 		messageBanner.show('This room is empty');
-		if (scMode || snMode) {
+		if (snMode) {
 			speakupClient.disableCallMode();
 		} else {
 			callModeEnabled = false;
 		}
 	} else {
 		messageBanner.hide();
-		if (scMode || snMode) {
+		if (snMode) {
 			speakupClient.enableCallMode();
 		} else {
 			callModeEnabled = true;
@@ -281,106 +325,179 @@ function secondsToString(msec) {
 	return (hours == 0 ? '' : ((hours < 10 ? "0" + hours : hours) + ":")) + (minutes < 10 ? "0" + minutes : minutes) + ":" + (seconds  < 10 ? "0" + seconds : seconds);
 }
 
-// parse chat/action messages
-function addChatMsg(data, toMyself) {
-	if (data.type === 'chat') {
-		var msg = fixSpecialSymbols(data.payload.message);
-		if (msg.length == 0) return;
-		$('#chatlog').prepend("<div class='message'><b>" + fixSpecialSymbols(data.payload.nick) + "</b><br/>" + msg + "</div>");
-		if (!toMyself) {
-			playSound('message');
-			alert("New message from " + fixSpecialSymbols(data.payload.nick) + ":<br/>" + fixSpecialSymbols(data.payload.message), 'info');
-			setUnreadMessages(unreadMessages + 1);
-		}
-		return;
-	}
-
-	if (data.type === 'youtube') {
-		var actLink = data.payload.link;
-		var ytId = actLink.match(/(v=|embed\/)([a-zA-Z0-9\-_]*)/);
-		if (!(ytId != null && ytId[2])) {
-			$('#chatlog').prepend("<div class='message'><b>" + fixSpecialSymbols(data.payload.nick) + "</b><br/>Sent bad YouTube link!</div>");
-			return;
-		}
-
-		$('#chatlog').prepend(
-			"<div class='message'><b>" + fixSpecialSymbols(data.payload.nick) + "</b><br/>" +
-			"<iframe width='100%' height='300' src='https://www.youtube-nocookie.com/embed/" + ytId[2] +
-			"?rel=0&amp;controls=1&amp;autoplay=1' frameborder='0' allowfullscreen></iframe></div>"
-		);
-
-		if (!toMyself) {
-			playSound('message');
-			alert("New video from " + fixSpecialSymbols(data.payload.nick) + "<br/>(open chat to see it)", 'info');
-			setUnreadMessages(unreadMessages + 1);
-		}
-		return;
-	}
-
-	if (data.type === 'screamer') {
-		var scId = data.payload.id;
-		if (!LS.get('disable_screamers')) {
-			if (scId === 1 || scId === 2) {
-				playSound('scream' + scId);
-			}
-		}
-
-		var showDelay = 6000;
-		switch (scId) {
-			case 1: showDelay = 6000; break;
-			case 2: showDelay = 4500; break;
-			case 3: showDelay = 4500; break;
-		}
-
-		if (scId === 3) {
-			setTimeout(function() {
-				$('#rainbow').addClass('rainbow').show();
-				playSound('rainbow');
-				setTimeout(function() {
-					$('#rainbow').removeClass('rainbow').hide();
-				}, 5000);
-			}, showDelay);
-		} else {
-			setTimeout(function() {
-				$('#screamer').attr('src', Config.staticPath + '/apps/speakup/images/screamer' + scId + '.jpg');
-				$('#screamer').show();
-				setTimeout(function() {
-					$('#screamer').fadeOut('fast');
-				}, 4000);
-			}, showDelay);
-		}
-
-		return;
-	}
-
-	if (data.type === 'updateData') {
-		if (!(data.response && data.response.clients)) {
-			return;
-		}
-
-		var newVideoCount = 0;
-
-		for (var item in data.response.clients) {
-			var client = data.response.clients[item];
-			var videoInfo = data.videoInfo.clients[item];
-			var timeDiff = data.serverTime - client.joinedAt;
-
-			if (client.id != webrtc.connection.connection.id) {
-				if (videoInfo.video === true) { newVideoCount++; }
-				if (videoInfo.screen === true) { newVideoCount++; }
-				var contEl = getVideoByClId(client.id);
-
-				if (contEl) {
-					$('#container_' + contEl.id).data('time-joined', client.joinedAt)
-							 .addClass('timerEnabled');
-				}
-			} else {
-				$('#ownVideo').data('time-joined', client.joinedAt)
-							  .addClass('timerEnabled');
-			}
-		}
+var Chat = {
+	visible: false,
+	
+	logMessage: function(code, toMyself) {
+		var className = (toMyself) ? "message-out" : "message-in";
+		$('#chatlog').append("<div class='message " + className + "'>" + code + "</div>");
+		this.scrollLog();
+	},
+	
+	scrollLog: function() {
+		var cHeight = $('#chatlog').height();
+		var cScrollHeight = $('#chatlog')[0].scrollHeight;
+		var cTop = $('#chatlog').scrollTop();
+		var cAllowedOffset = 100;
 		
-		currentTime = data.serverTime;
+		var cViewBox = cScrollHeight - cHeight - cAllowedOffset;
+		
+		if (cTop > cViewBox) {
+			$('#chatlog').scrollTop(cScrollHeight + cHeight);
+		}
+	},
+	
+	parseMessage: function(data, toMyself) {
+		if (data.type === 'chat') {
+			var msg = fixSpecialSymbols(data.payload.message);
+			if (msg.length == 0) return;
+			this.logMessage("<b>" + fixSpecialSymbols(data.payload.nick) + "</b><br/>" + msg, (toMyself | false));
+			if (!toMyself) {
+				playSound('message');
+				alert("New message from " + fixSpecialSymbols(data.payload.nick) + ":<br/>" + fixSpecialSymbols(data.payload.message), 'info');
+				setUnreadMessages(unreadMessages + 1);
+			}
+			return;
+		}
+
+		if (data.type === 'youtube') {
+			var actLink = data.payload.link;
+			var ytId = actLink.match(/(v=|embed\/)([a-zA-Z0-9\-_]*)/);
+			if (!(ytId != null && ytId[2])) {
+				this.logMessage("<b>" + fixSpecialSymbols(data.payload.nick) + "</b><br/>Sent bad YouTube link!");
+				return;
+			}
+
+			this.logMessage(
+				"<b>" + fixSpecialSymbols(data.payload.nick) + "</b><br/>" +
+				"<iframe width='100%' height='300' src='https://www.youtube-nocookie.com/embed/" + ytId[2] +
+				"?rel=0&amp;controls=1&amp;autoplay=1' frameborder='0' allowfullscreen></iframe>"
+			);
+
+			if (!toMyself) {
+				playSound('message');
+				alert("New video from " + fixSpecialSymbols(data.payload.nick) + "<br/>(open chat to see it)", 'info');
+				setUnreadMessages(unreadMessages + 1);
+			}
+			return;
+		}
+
+		if (data.type === 'screamer') {
+			var scId = data.payload.id;
+			if (!LS.get('disable_screamers')) {
+				if (scId === 1 || scId === 2) {
+					playSound('scream' + scId);
+				}
+			}
+
+			var showDelay = 6000;
+			switch (scId) {
+				case 1: showDelay = 6000; break;
+				case 2: showDelay = 4500; break;
+				case 3: showDelay = 4500; break;
+			}
+
+			if (scId === 3) {
+				setTimeout(function() {
+					$('#rainbow').addClass('rainbow').show();
+					playSound('rainbow');
+					setTimeout(function() {
+						$('#rainbow').removeClass('rainbow').hide();
+					}, 5000);
+				}, showDelay);
+			} else {
+				setTimeout(function() {
+					$('#screamer').attr('src', Config.staticPath + '/apps/speakup/images/screamer' + scId + '.jpg');
+					$('#screamer').show();
+					setTimeout(function() {
+						$('#screamer').fadeOut('fast');
+					}, 4000);
+				}, showDelay);
+			}
+
+			return;
+		}
+
+		if (data.type === 'updateData') {
+			if (!(data.response && data.response.clients)) {
+				return;
+			}
+
+			var newVideoCount = 0;
+
+			for (var item in data.response.clients) {
+				var client = data.response.clients[item];
+				var videoInfo = data.videoInfo.clients[item];
+				var timeDiff = data.serverTime - client.joinedAt;
+
+				if (client.id != webrtc.connection.connection.id) {
+					if (videoInfo.video === true) { newVideoCount++; }
+					if (videoInfo.screen === true) { newVideoCount++; }
+					var contEl = getVideoByClId(client.id);
+
+					if (contEl) {
+						$('#container_' + contEl.id).data('time-joined', client.joinedAt)
+								 .addClass('timerEnabled');
+					}
+				} else {
+					$('#ownVideo').data('time-joined', client.joinedAt)
+								  .addClass('timerEnabled');
+				}
+			}
+			
+			currentTime = data.serverTime;
+		}
+	},
+	
+	submitMsg: function() {
+		var ptext = $('#compose-input').val();
+
+		if (matches = ptext.match(/^\/command (screamer_enable|screamer_nomore)/)) {
+			egg = matches[1];
+			if (egg && egg == 'screamer_enable') {
+				enableScreamers(true);
+			}
+
+			if (egg && egg == 'screamer_nomore') {
+				alert("OK, you won't be able to hear screamers", 'info');
+				LS.set('disable_screamers', 1);
+			}
+
+			$('#compose-input').val('');
+			$('#compose-input').focus();
+			return;
+		}
+
+		if (ptext != "") {
+			var dPayload = {nick: webrtc.config.nick, message: ptext};
+			webrtc.sendToAll("chat", dPayload);
+			var data = {
+				type: 'chat',
+				payload: dPayload
+			}
+			this.parseMessage(data, true);
+
+			EventLogger.log('message');
+		}
+
+		$('#compose-input').val('');
+		$('#compose-input').focus();
+	},
+	
+	showWindow: function() {
+		this.visible = true;
+		$('#chat').animate({'margin-right': '0'});
+		$('#alert-container').animate({'margin-right': '330px'});
+		$('#tlb-chat').removeClass('inactive').addClass('active');
+		
+		setUnreadMessages(0);
+	},
+
+	hideWindow: function() {
+		this.visible = false;
+		$('#chat').animate({'margin-right': '-100%'});
+		$('#alert-container').animate({'margin-right': '0'});
+		$('#tlb-chat').removeClass('active').addClass('inactive');
 	}
 }
 
@@ -433,7 +550,7 @@ function submitLoginForm() {
 	setRoom(true);
 	$('#loginWindow').slideUp('fast');
 	$('#loader .spinner').show();
-	if (typeof ga == 'function') { ga('send', 'event', 'speakup', 'login'); }
+	EventLogger.log('login');
 	systemInit();
 }
 
@@ -606,7 +723,7 @@ function prepareCall() {
 	});
 
 	webrtc.connection.on('message', function(data){
-		addChatMsg(data);
+		Chat.parseMessage(data);
 	});
 
 	webrtc.on('videoAdded', function (video, peer) {
@@ -668,13 +785,16 @@ function prepareCall() {
 
 	// local p2p/ice failure
 	webrtc.on('iceFailed', function (peer) {
+		alert("User " + peer.nick + " has been disconnected due to connection problems (ice_failed).", 'error');
 		removeVideo(webrtc.getDomId(peer), true);
+		console.log("ICE Failed on peer", peer);
 	});
 
 	// remote p2p/ice failure
 	webrtc.on('connectivityError', function (peer) {
-		console.log('remote fail');
-		playSound('error');
+		alert("User " + peer.nick + " has been disconnected due to connection problems (connectivity_error).", 'error');
+		removeVideo(webrtc.getDomId(peer), true);
+		console.log("Remote fail", peer);
 	});
 
 	// log every callback
@@ -713,7 +833,7 @@ function prepareCall() {
 		updateTimers();
 	}, 1000);
 
-	if (typeof ga == 'function') { ga('send', 'event', 'speakup', 'callready'); }
+	EventLogger.log('callready');
 }
 
 function enableScreamers(enable) {
@@ -742,7 +862,7 @@ function setRoom(onlyLocation) {
 	if (onlyLocation) return;
 
 	$('#createRoom').remove();
-	$('#overlay').data('tooltip', "SpeakUP v" + $('body').data('version') + "<br/>&copy; LinkSoft.cf");
+	$('#overlay').data('tooltip', "SpeakUP v" + Config.version + "<br/>&copy; LinkSoft.cf");
 	initTooltips('#overlay');
 	$('#tlb-share').unbind('click').click(function() {
 		$('.modal').slideUp('fast');
@@ -753,7 +873,7 @@ function setRoom(onlyLocation) {
 		});
 	});
 
-	if (typeof ga == 'function') { ga('send', 'event', 'speakup', 'joinroom'); }
+	EventLogger.log('joinroom');
 
 	$('body').removeClass('loading').addClass('fade-in active');
 	clearTimeout(initFailedTimer);
@@ -808,51 +928,24 @@ function initVideoPermissions(callback, requestVideo) {
 	);
 }
 
-function submitMsg() {
-	var ptext = $('#compose-input').val();
-
-	if (matches = ptext.match(/^\/command (screamer_enable|screamer_nomore)/)) {
-		egg = matches[1];
-		if (egg && egg == 'screamer_enable') {
-			enableScreamers(true);
-		}
-
-		if (egg && egg == 'screamer_nomore') {
-			alert("OK, you won't be able to hear screamers", 'info');
-			LS.set('disable_screamers', 1);
-		}
-
-		$('#compose-input').val('');
-		$('#compose-input').focus();
-		return;
-	}
-
-	if (ptext != "") {
-		var dPayload = {nick: webrtc.config.nick, message: ptext};
-		webrtc.sendToAll("chat", dPayload);
-		var data = {
-			type: 'chat',
-			payload: dPayload
-		}
-		addChatMsg(data, true);
-
-		if (typeof ga == 'function') { ga('send', 'event', 'speakup', 'message'); }
-	}
-
-	$('#compose-input').val('');
-	$('#compose-input').focus();
-}
-
 function oldBrowser() {
+	initFailed = true;
 	messageBanner.show("Your browser is unable to initialize WebRTC, please update or use another browser");
 	$('body').removeClass('active').addClass('loading');
 	$('#loader .spinner').hide();
-	if (typeof ga == 'function') { ga('send', 'event', 'speakup', 'oldbrowser'); }
+	EventLogger.log('oldbrowser');
 }
 
 function checkCapabilities() {
 	if (!webrtc.capabilities.supportGetUserMedia) {
 		oldBrowser();
+		return;
+	}
+	
+	if (typeof window.speakupClient != 'undefined') {
+		// old C# client
+		oldBrowser();
+		return;
 	}
 
 	if (sessionStorage.getItem('speakup_screen_share') != 'true') {
@@ -881,7 +974,7 @@ function checkCapabilities() {
 }
 
 function setUnreadMessages(count) {
-	if (chatVisible) {
+	if (Chat.visible) {
 		unreadMessages = 0;
 		$('#tlb-chat-unread').html('').hide();
 	} else {
@@ -894,22 +987,6 @@ function setUnreadMessages(count) {
 	}
 }
 
-function showChat() {
-	chatVisible = true;
-	$('#chat').animate({'margin-right': '0'});
-	$('#alert-container').animate({'margin-right': '330px'});
-	$('#tlb-chat').removeClass('inactive').addClass('active');
-	
-	setUnreadMessages(0);
-}
-
-function hideChat() {
-	chatVisible = false;
-	$('#chat').animate({'margin-right': '-100%'});
-	$('#alert-container').animate({'margin-right': '0'});
-	$('#tlb-chat').removeClass('active').addClass('inactive');
-}
-
 function sendScreamer(scId) {
 	var scId = scId || Math.floor(Math.random() * 3) + 1;
 	var dPayload = {id: scId};
@@ -919,9 +996,9 @@ function sendScreamer(scId) {
 		payload: dPayload
 	}
 
-	if (typeof ga == 'function') { ga('send', 'event', 'speakup', 'screamer'); }
+	EventLogger.log('screamer');
 
-	addChatMsg(data, true);
+	Chat.parseMessage(data, true);
 
 	$('#chat-sc')
 		.attr('disabled', 'disabled')
@@ -955,13 +1032,13 @@ function initButtons() {
 
 	$('#chat-go').unbind('click').click(function(e) {
 		e.preventDefault();
-		submitMsg();
+		Chat.submitMsg();
 	});
 
 	$('#compose-input').unbind('keypress').on('keypress', function(e) {
 		if (e.keyCode == 13) { // enter
 			e.preventDefault();
-			submitMsg();
+			Chat.submitMsg();
 		}
 	});
 
@@ -985,16 +1062,16 @@ function initButtons() {
 				type: 'youtube',
 				payload: dPayload
 			}
-			addChatMsg(data, true);
-			showChat();
+			Chat.parseMessage(data, true);
+			Chat.showWindow();
 		}
 	});
 
 	$('#chat-toggle,#tlb-chat').unbind('click').click(function() {
-		if (chatVisible) {
-			hideChat();
+		if (Chat.visible) {
+			Chat.hideWindow();
 		} else {
-			showChat();
+			Chat.showWindow();
 		}
 	});
 
@@ -1013,15 +1090,7 @@ function initButtons() {
 	});
 
 	$('#tlb-full').unbind('click').on('click', function() {
-		if (scMode) {
-			if (speakupClient.isFullScreen) {
-				speakupClient.disableFullScreen();
-				$(this).removeClass('active').addClass('inactive');
-			} else {
-				speakupClient.enableFullScreen();
-				$(this).removeClass('inactive').addClass('active');
-			}
-		} else if (screenfull.enabled) {
+		if (screenfull.enabled) {
 			if (screenfull.isFullscreen) {
 				screenfull.exit();
 				$(this).removeClass('active').addClass('inactive');
@@ -1092,7 +1161,7 @@ function initButtons() {
 		location.reload();
 	});
 
-	if (scMode || snMode) {
+	if (snMode) {
 		$('#msgUseClient').hide();
 	}
 
@@ -1182,6 +1251,7 @@ function injectElements() {
 	}
 
 	Config.staticPath = $('body').data('static');
+	Config.version = $('body').data('version');
 
 	if (snMode) {
 		window.speakupClient = {
@@ -1239,19 +1309,20 @@ var InfoPull = {
 }
 
 function systemInit() {
+	injectElements();
+	initButtons();
+	initTooltips();
+		
 	initFailed = false;
 	initFailedTimer = setTimeout(function() {
 		messageBanner.hide();
-		messageBanner.fatal("Initialization failed due to timeout.<br/>Please, check if you've allowed usage of your microphone and web camera.");
-	}, 5000);
+		messageBanner.fatal("Initialization failed due to timeout.<br/>Please, check if you've allowed usage of your microphone and web camera. Also, server may be down.");
+	}, 7000);
 	
 	enumerateDevices(function() {
-		injectElements();
 		initVolumeControl();
 		enableScreamers();
 		cacheResources();
-		initButtons();
-		initTooltips();
 		initVideoPermissions(function() {
 			prepareCall();
 		}, true);
@@ -1265,9 +1336,15 @@ $(document).ready(function() {
 });
 
 $(window).on('beforeunload', function() {
-	if (callModeEnabled) {
-		return "You are currently in conference. Do you really want to close SpeakUP?";
-	} else {
+	if (settingsNeedReload) {
 		
+	} else {
+		if (callModeEnabled) {
+			return "You are currently in conference.\nDo you really want to close SpeakUP?";
+		}
 	}
+});
+
+$(window).on('resize', function() {
+	Chat.scrollLog();
 });

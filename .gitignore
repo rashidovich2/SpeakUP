@@ -4,3 +4,4 @@ resources/styles/*.css
 build.sh
 build.php
 .sass-cache
+logger.php
