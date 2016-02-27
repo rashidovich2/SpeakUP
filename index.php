@@ -47,18 +47,27 @@ class CodeGen {
 		$this->staticPath = $static;
 
 		$this->fillUp();
+		$this->iconsTouch = $this->listIcons('apple-touch-icon', $this->staticPath . '/apps/speakup/images/icons', 'apple-touch-icon', $this->sizes->touch);
+		$this->iconsFav = $this->listIcons('icon', $this->staticPath . '/apps/speakup/images/icons', 'favicon', $this->sizes->icon);
 	}
 }
 
-$ver = "1.8.2";
+$ver = "1.8.3";
 
-$files = array(
-	array('css', 'styles/app.css'),
-	array('js',  'scripts/simplewebrtc.bundle.js'),
-	array('js',  'scripts/tooltip.min.js'), // http://darsa.in/tooltip/
-	array('js',  'scripts/screenfull.min.js'), // https://github.com/sindresorhus/screenfull.js
-	array('js',  'scripts/app.js'),
-);
+if (defined("DEBUG") || isset($_REQUEST['debug'])) {
+	$files = array(
+		array('css', 'styles/app.css'),
+		array('js',  'scripts/swrtc-latest-v2.min.js'),
+		array('js',  'scripts/tooltip.min.js'), // http://darsa.in/tooltip/
+		array('js',  'scripts/screenfull.min.js'), // https://github.com/sindresorhus/screenfull.js
+		array('js',  'scripts/app.js')
+	);
+} else {
+	$files = array(
+		array('css', 'styles/app.css'),
+		array('js',  'scripts/compiled.js')
+	);
+}
 
 $code = new CodeGen($static, $files);
 
@@ -70,13 +79,14 @@ trackStat("SpeakUP", $ver, "start");
 		<title>SpeakUP</title>
 		<meta charset='utf-8' />
 		<link rel='shortcut icon' href='<?=$static?>/apps/speakup/images/icons/favicon.png' />
-		<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Scada&subset=latin,cyrillic' />
+		<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Scada&amp;subset=latin,cyrillic' />
 		<meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1' />
 
 		<meta name='title' value='SpeakUP!' />
 		<meta name='description' value='Instant videoconferences for up to 4 people' />
-		<link rel="image_src" href='<?=$static?>/apps/speakup/images/screenshot.png' />
-		<link rel="chrome-webstore-item" href="https://chrome.google.com/webstore/detail/mkjefhhjabmifmakbfmjgjbhhpiloamp">
+		<link rel='image_src' href='<?=$static?>/apps/speakup/images/screenshot.png' />
+		<link rel='chrome-webstore-item' href='https://chrome.google.com/webstore/detail/mkjefhhjabmifmakbfmjgjbhhpiloamp' />
+		<meta name='theme-color' content='#113355'>
 
 		<meta property='og:title' content='SpeakUP!'/>
 		<meta property='og:type' content='website'/>
@@ -145,6 +155,9 @@ trackStat("SpeakUP", $ver, "start");
 				</div>
 				<div class='row'>
 					<div><label><input type='checkbox' id='videoDeviceQuality'/>Prefer HD video</label></div>
+				</div>
+				<div class='row'>
+					<div><label><input type='checkbox' id='confirmClose'/>Show confirmation on closing</label></div>
 				</div>
 				<div class='row'>
 					<div><button id='prefsCancel' class='btn'><i class="icon icon-cancel"></i> Cancel</button></div>
@@ -251,7 +264,7 @@ trackStat("SpeakUP", $ver, "start");
 			ga('create', 'UA-9210291-4', 'auto');
 			ga('send', 'pageview');
 		</script>
-		<!-- END: Google Analytics -->
+		<!-- end: Google Analytics -->
 
 		<!-- JS LIBS -->
 		<script src='https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js'></script>

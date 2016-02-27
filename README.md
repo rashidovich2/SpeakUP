@@ -5,12 +5,25 @@ SpeakUP.cf allows you to create instant videoconference for up to 4 people.
 It uses peer-2-peer connection between clients to transmit audio/video (WebRTC protocol).
 
 [Start videoconference](https://speakup.cf/)
+&bull;
+[VK Page](https://vk.com/speakupcf)
 
 ## Creating own version
+### Dependencies
+* [SimpleWebRTC](https://github.com/andyet/SimpleWebRTC)
+* [SASS](http://sass-lang.com/)
+* [UglifyJS](http://lisperator.net/uglifyjs/)
 
-Not available at the moment
+### Installation
+Not available at the moment.
 
 ## Version History
+### 1.8.3
+* Updated SimpleWebRTC Library.
+* Improved loading time by minifying javascript.
+* Fixed inclusion of favicons.
+* Option to disable confirmation of tab closing.
+
 ### 1.8.2
 * Event Logging System.
 * Fixes in detection of audio/video devices.

@@ -51,9 +51,35 @@ var settingsNeedReload = false;
 var snMode = (typeof window.node != 'undefined'); // Client for Electron
 var initFailedTimer;
 var currentTime = 1*(new Date());
-var unreadMessages = 0;
 var notificationTimeout = 3000;
 var callModeEnabled = false;
+var actionDelay = 300; // delay before page reload/loader disappear
+
+// Sound Controller
+var Sound = {
+	volume: 1,
+	
+	updateRemoteVolume: function(vol) {
+		var vol = vol;
+		this.volume = vol;
+		LS.set('remote_volume', this.volume);
+		$('#remotes video').each(function() {
+			$(this).get(0).volume = vol;
+		});
+	},
+
+	initVolumeControl: function() {
+		var volCurrent = LS.get('remote_volume') || 1;
+		$('#sliderVolume').attr('value', volCurrent);
+		this.volume = volCurrent;
+	},
+	
+	play: function(name){
+		var snd = new Audio(Config.staticPath + "/apps/speakup/sounds/" + name + ".ogg");
+		snd.volume = this.volume;
+		snd.play();
+	}
+}
 
 // call configuration
 var Config = {
@@ -170,6 +196,7 @@ function alert(text, type, timeout){
 	return true;
 }
 
+// Handle Browser/Clients Notifications
 var NotificationWrapper = function (argTitle, argText) {
 	var title = argTitle;
 	var text = argText;
@@ -226,14 +253,6 @@ var NotificationWrapper = function (argTitle, argText) {
 	sendAutoDetect();
 }
 
-function playSound(name){
-	var snd = new Audio(Config.staticPath + "/apps/speakup/sounds/" + name + ".ogg");
-	var volCurrent = LS.get('remote_volume') || 1;
-
-	snd.volume = volCurrent;
-	snd.play();
-}
-
 function showVolume(el, volume) {
 	//return;
 	if (!el) return;
@@ -266,6 +285,7 @@ function fixSpecialSymbols(text, onlyLatin){
 	}
 }
 
+// Message Banner on top of app
 var messageBanner = {
 	show: function(text) {
 		$('#message').html(text).slideDown('fast');
@@ -297,6 +317,7 @@ var messageBanner = {
 	}
 }
 
+// Show or hide message if room is empty
 function msgIfEmpty(){
 	if (videoCount == 0){
 		messageBanner.show('This room is empty');
@@ -315,6 +336,7 @@ function msgIfEmpty(){
 	}
 }
 
+// Convert seconds to formatted string (HH:MM:SS)
 function secondsToString(msec) {
 	var tDate = new Date(msec);
 	
@@ -325,8 +347,10 @@ function secondsToString(msec) {
 	return (hours == 0 ? '' : ((hours < 10 ? "0" + hours : hours) + ":")) + (minutes < 10 ? "0" + minutes : minutes) + ":" + (seconds  < 10 ? "0" + seconds : seconds);
 }
 
+// Chat object and functions
 var Chat = {
 	visible: false,
+	unreadMessages: 0,
 	
 	logMessage: function(code, toMyself) {
 		var className = (toMyself) ? "message-out" : "message-in";
@@ -353,9 +377,9 @@ var Chat = {
 			if (msg.length == 0) return;
 			this.logMessage("<b>" + fixSpecialSymbols(data.payload.nick) + "</b><br/>" + msg, (toMyself | false));
 			if (!toMyself) {
-				playSound('message');
+				Sound.play('message');
 				alert("New message from " + fixSpecialSymbols(data.payload.nick) + ":<br/>" + fixSpecialSymbols(data.payload.message), 'info');
-				setUnreadMessages(unreadMessages + 1);
+				this.setUnread(this.unreadMessages + 1);
 			}
 			return;
 		}
@@ -375,9 +399,9 @@ var Chat = {
 			);
 
 			if (!toMyself) {
-				playSound('message');
+				Sound.play('message');
 				alert("New video from " + fixSpecialSymbols(data.payload.nick) + "<br/>(open chat to see it)", 'info');
-				setUnreadMessages(unreadMessages + 1);
+				this.setUnread(this.unreadMessages + 1);
 			}
 			return;
 		}
@@ -386,7 +410,7 @@ var Chat = {
 			var scId = data.payload.id;
 			if (!LS.get('disable_screamers')) {
 				if (scId === 1 || scId === 2) {
-					playSound('scream' + scId);
+					Sound.play('scream' + scId);
 				}
 			}
 
@@ -400,7 +424,7 @@ var Chat = {
 			if (scId === 3) {
 				setTimeout(function() {
 					$('#rainbow').addClass('rainbow').show();
-					playSound('rainbow');
+					Sound.play('rainbow');
 					setTimeout(function() {
 						$('#rainbow').removeClass('rainbow').hide();
 					}, 5000);
@@ -428,7 +452,6 @@ var Chat = {
 			for (var item in data.response.clients) {
 				var client = data.response.clients[item];
 				var videoInfo = data.videoInfo.clients[item];
-				var timeDiff = data.serverTime - client.joinedAt;
 
 				if (client.id != webrtc.connection.connection.id) {
 					if (videoInfo.video === true) { newVideoCount++; }
@@ -490,7 +513,7 @@ var Chat = {
 		$('#alert-container').animate({'margin-right': '330px'});
 		$('#tlb-chat').removeClass('inactive').addClass('active');
 		
-		setUnreadMessages(0);
+		this.setUnread(0);
 	},
 
 	hideWindow: function() {
@@ -498,6 +521,20 @@ var Chat = {
 		$('#chat').animate({'margin-right': '-100%'});
 		$('#alert-container').animate({'margin-right': '0'});
 		$('#tlb-chat').removeClass('active').addClass('inactive');
+	},
+	
+	setUnread: function(count) {
+		if (this.visible) {
+			this.unreadMessages = 0;
+			$('#tlb-chat-unread').html('').hide();
+		} else {
+			this.unreadMessages = count;
+			if (count > 0) {
+				$('#tlb-chat-unread').html(count).show();
+			} else {
+				$('#tlb-chat-unread').html('').hide();
+			}
+		}
 	}
 }
 
@@ -554,6 +591,7 @@ function submitLoginForm() {
 	systemInit();
 }
 
+// Generates nickname and room name, typeGen: ['room', 'nick']
 function generateRandom(typeGen) {
     var adjectives = ['autumn', 'hidden', 'bitter', 'misty', 'silent', 'empty', 'dry', 'dark', 'summer', 'icy', 'delicate', 'quiet', 'white', 'cool', 'spring', 'winter', 'patient', 'twilight', 'dawn', 'crimson', 'wispy', 'weathered', 'blue', 'billowing', 'broken', 'cold', 'falling', 'frosty', 'green', 'long', 'late', 'lingering', 'bold', 'little', 'morning', 'muddy', 'old', 'red', 'rough', 'still', 'small', 'sparkling', 'shy', 'wandering', 'withered', 'wild', 'black', 'young', 'holy', 'solitary', 'fragrant', 'aged', 'snowy', 'proud', 'floral', 'restless', 'divine', 'polished', 'ancient', 'purple', 'lively', 'nameless'];
 
@@ -598,9 +636,9 @@ function removeVideo(id, error) {
 	}
 
 	if (error) {
-		playSound('error');
+		Sound.play('error');
 	} else {
-		playSound('user_leave');
+		Sound.play('user_leave');
 	}
 
 	videoCount--;
@@ -733,22 +771,22 @@ function prepareCall() {
 			var d = document.createElement('div');
 			d.className = 'videoContainer fade-in';
 			d.id = 'container_' + webrtc.getDomId(peer);
-			var v = document.createElement('div');
-			v.className = 'statusPanel noselect';
+			var pStatus = document.createElement('div');
+			pStatus.className = 'statusPanel noselect';
 			var peerId = webrtc.getDomId(peer);
-			v.innerHTML = "<div id='status_" + peerId + "' class='statusVol'></div>";
-			v.innerHTML+= "<div id='nick_" + peerId + "' class='statusNick'>" + (peer.nick || "Unknown") + "</div>";
-			v.innerHTML+= "<div id='time_" + peerId + "' class='statusTime'>00:00</div>";
-			// v.id = 'status_' + webrtc.getDomId(peer);
-			video.volume = LS.get('remote_volume') || 1;
+			pStatus.innerHTML = "<div id='status_" + peerId + "' class='statusVol'></div>";
+			pStatus.innerHTML+= "<div id='nick_" + peerId + "' class='statusNick'>" + (peer.nick || "Unknown") + "</div>";
+			pStatus.innerHTML+= "<div id='time_" + peerId + "' class='statusTime'>00:00</div>";
+			// pStatus.id = 'status_' + webrtc.getDomId(peer);
+			video.volume = Sound.volume;
 			d.onclick = function() {
 				$(this).toggleClass('videoContainerSelected');
 			}
 			
-			d.appendChild(v);
+			d.appendChild(pStatus);
 			d.appendChild(video);
 			remotes.appendChild(d);
-			playSound('user_join');
+			Sound.play('user_join');
 			msgIfEmpty();
 		}
 		
@@ -804,7 +842,6 @@ function prepareCall() {
 		if (loggable.indexOf(evtType) >= 0) {
 			if (showPreferences.indexOf(evtData.name) >= 0) {
 				$('.modal').slideUp('fast');
-				// $('#modal-back').fadeIn('fast');
 				LS.del("device_audio");
 				LS.del("device_video");
 				settingsNeedReload = true;
@@ -815,6 +852,7 @@ function prepareCall() {
 					messageBanner.fatal("Please, allow microphone and webcam usage to continue");
 				} else {
 					messageBanner.show("SimpleWebRTC Reported error: " + evtType);
+					console.log("SimpleWebRTC error: ", evtType, evtData);
 				}
 			}
 
@@ -823,10 +861,6 @@ function prepareCall() {
 			clearTimeout(initFailedTimer);
 		}
 	});
-
-	if (parseFloat(LS.get('dj_mode_vol')) > 0) {
-		$('#globalAudio').get(0).volume = parseFloat(LS.get('dj_mode_vol'));
-	}
 	
 	setInterval(function() {
 		updateCurrentTime();
@@ -881,8 +915,8 @@ function setRoom(onlyLocation) {
 	msgIfEmpty();
 }
 
+// Check for permissions on app start.
 function initVideoPermissions(callback, requestVideo) {
-	console.log("Permission Check Start");
 	if (initFailed) return;
 	var requestVideo = requestVideo || false;
 	
@@ -910,13 +944,24 @@ function initVideoPermissions(callback, requestVideo) {
 		function(err) {
 			var errMessage = "";
 			var showSettings = false;
-			console.log(err);
+
 			switch (err.name) {
-				case "PermissionDismissedError": errMessage = "You've dismissed the request to share camera and microphone, reload page and allow usage."; break;
-				case "SecurityError": // firefox - denied or dismissed
-				case "PermissionDeniedError": errMessage = "You've denied the request to share camera and microphone. Please, allow usage and reload page."; break; // chrome - denied
-				case "SourceUnavailableError": messageBanner.show("Your camera is already in use by other application"); initVideoPermissions(function() { callback(); }, false); return; break;
-				default: errMessage = "Unknown error occurred while requesting permission for camera and microphone."; console.log(err);
+				case "PermissionDismissedError":
+					errMessage = "You've dismissed the request to share camera and microphone, reload page and allow usage.";
+					break;
+				case "SecurityError": // Firefox - denied or dismissed
+				case "PermissionDeniedError": // Chrome - denied
+					errMessage = "You've denied the request to share camera and microphone. Please, allow usage and reload page.";
+					break;
+				case "SourceUnavailableError": // Firefox - camera in use
+					messageBanner.show("Your camera is already in use by other application");
+					initVideoPermissions(function() {
+						callback();
+					}, false);
+					return;
+				default:
+					errMessage = "Unknown error occurred while requesting permission for camera and microphone.";
+					console.log(err);
 			}
 			
 			messageBanner.fatal(errMessage, showSettings);
@@ -938,53 +983,45 @@ function oldBrowser() {
 
 function checkCapabilities() {
 	if (!webrtc.capabilities.supportGetUserMedia) {
+		// Browser doesn't support WebRTC.
 		oldBrowser();
 		return;
 	}
 	
-	if (typeof window.speakupClient != 'undefined') {
-		// old C# client
+	if (navigator.userAgent.indexOf('SpeakUPClient') != -1) {
+		// Old C# client. Show warning, cause this client is abandoned.
 		oldBrowser();
 		return;
 	}
 
 	if (sessionStorage.getItem('speakup_screen_share') != 'true') {
+		// This is a test for chrome (maybe, firfox in future) to determine
+		// if there is screen sharing extension installed.
 		if (!webrtc.capabilities.supportScreenSharing) {
+			// Welp, no support for screen sharing at all, hiding this feature.
 			$('#tlb-screen').unbind('click');
 			$('#tlb-screen').hide();
 		} else if (typeof chrome != 'undefined' && !!(chrome && chrome.webstore && chrome.webstore.install)) {
+			// Chrome... Good, but user has to install an extension.
 			$('#tlb-screen').unbind('click').on('click', function() {
 				chrome.webstore.install('', function() {
-					// success callback
+					// Extension is now installed, reload.
 					location.reload();
 				}, function() {
 					alert("Can't start screen sharing without extension", "error");
 				});
 			});
 		} else if (snMode) {
-			// that's ok, it's an electron launcher
+			// That's ok, it's an electron launcher. There's no need for extension.
 		} else {
-			// oh, that's a firefox
+			// Oh, that's a Firefox. It requires an extension, but it's a hassle to create one.
+			// Let's just hide the screen sharing feature.
 			$('#tlb-screen').unbind('click');
 			$('#tlb-screen').hide();
 		}
 	}
 
 	enumerateDevices();
-}
-
-function setUnreadMessages(count) {
-	if (Chat.visible) {
-		unreadMessages = 0;
-		$('#tlb-chat-unread').html('').hide();
-	} else {
-		unreadMessages = count;
-		if (count > 0) {
-			$('#tlb-chat-unread').html(count).show();
-		} else {
-			$('#tlb-chat-unread').html('').hide();
-		}
-	}
 }
 
 function sendScreamer(scId) {
@@ -1012,19 +1049,6 @@ function sendScreamer(scId) {
 			.addClass('active');
 
 	}, 30000);
-}
-
-function updateRemoteVolume(vol) {
-	var vol = vol;
-	LS.set('remote_volume', vol);
-	$('#remotes video').each(function() {
-		$(this).get(0).volume = vol;
-	});
-}
-
-function initVolumeControl() {
-	var volCurrent = LS.get('remote_volume') || 1;
-	$('#sliderVolume').attr('value', volCurrent);
 }
 
 function initButtons() {
@@ -1118,14 +1142,18 @@ function initButtons() {
 		LS.set("device_audio", $('#audioDeviceSelector').val());
 		LS.set("device_video", $('#videoDeviceSelector').val());
 		LS.set("enable_hd", $('#videoDeviceQuality').prop('checked'));
-		// updateRemoteVolume($('#volumeSelector').val());
-		updateRemoteVolume($('#sliderVolume').val());
+		LS.set("close_confirmation", $('#confirmClose').prop('checked'));
+		if (snMode) {
+			speakupClient.confirmClose($('#confirmClose').prop('checked'));
+		}
+		
+		Sound.updateRemoteVolume($('#sliderVolume').val());
 		$('#preferencesWindow').fadeOut('fast');
 		if (settingsNeedReload || $('body').hasClass('loading')) {
 			alert("Applying settings...", "info");
 			setTimeout(function() {
 				location.reload();
-			}, 300);
+			}, actionDelay);
 		} else {
 			$('#modal-back').fadeOut('fast');
 		}
@@ -1162,6 +1190,7 @@ function initButtons() {
 	});
 
 	if (snMode) {
+		// Hide SpeakUP client advertisement.
 		$('#msgUseClient').hide();
 	}
 
@@ -1172,11 +1201,15 @@ function initButtons() {
 			$('#tlb-screen').removeClass('active').addClass('inactive');
 		} else if (snMode && webrtc.getLocalScreen()) {
 			webrtc.stopScreenShare();
+			
+			// Fix for some errors (It seems that SimpleWebRTC sometimes doesn't stop
+			// screen sharing, so I'm force stopping all screen sharing tracks).
 			if (webrtc.webrtc.localScreen && webrtc.webrtc.localScreen.getTracks().length > 0) {
 				for (var i = 0; i < webrtc.webrtc.localScreen.getTracks().length; i++) {
 					webrtc.webrtc.localScreen.getTracks()[i].stop();
 				}
 			}
+			
 			alert("Screen sharing is now disabled", 'info');
 			$('#tlb-screen').removeClass('active').addClass('inactive');
 		} else {
@@ -1200,6 +1233,19 @@ function initButtons() {
 	$('#ownVideo').unbind('click').on('click', function() {
 		$(this).toggleClass('videoContainerSelected');
 	});
+	
+	if (!LS.get("close_confirmation")){
+		$('#confirmClose').prop('checked', true);
+		LS.set("close_confirmation", "true");
+	} else if (LS.get("close_confirmation") && LS.get("close_confirmation") == "true") {
+		$('#confirmClose').prop('checked', true);
+	} else {
+		$('#confirmClose').prop('checked', false);
+	}
+	
+	if (snMode) {
+		speakupClient.confirmClose($('#confirmClose').prop('checked'));
+	}
 }
 
 function initTooltips(selector) {
@@ -1246,21 +1292,25 @@ function injectElements() {
 		$('body').append("<div id='rainbow'></div>");
 	}
 
-	if ($('#globalAudio').length == 0) {
-		$('body').append("<audio id='globalAudio'></audio>");
-	}
-
 	Config.staticPath = $('body').data('static');
 	Config.version = $('body').data('version');
 
 	if (snMode) {
 		window.speakupClient = {
-			disableCallMode: function(){
+			disableCallMode: function() {
 				node.ipcRenderer.send('call-mode-change', 'disable');
 			},
 
-			enableCallMode: function(){
+			enableCallMode: function() {
 				node.ipcRenderer.send('call-mode-change', 'enable');
+			},
+			
+			confirmClose: function(enable) {
+				if (enable) {
+					node.ipcRenderer.send('confirm-close-change', 'enable');
+				} else {
+					node.ipcRenderer.send('confirm-close-change', 'disable');
+				}
 			}
 		}
 
@@ -1268,16 +1318,21 @@ function injectElements() {
 			window.chrome = {};
 		}
 
-		window.chrome = {
-			webstore: false
+		if (!window.chrome.webstore) {
+			window.chrome = {
+				webstore: false
+			}
 		}
 	}
 }
 
+// Pre-cache resources
 function cacheResources() {
 	var audioFiles = ['user_join', 'user_leave', 'message', 'error', 'scream1', 'scream2', 'rainbow'];
 	for (var i = 0; i < audioFiles.length; i++) {
 		var snd = new Audio(Config.staticPath + "/apps/speakup/sounds/" + audioFiles[i] + ".ogg");
+		snd.muted = true;
+		// Fix for Grunt's warning: "WARN: Side effects in initialization of unused variable snd"
 	}
 
 	var imageFiles = ['screamer1', 'screamer2'];
@@ -1287,6 +1342,7 @@ function cacheResources() {
 	}
 }
 
+// Status updater
 var InfoPull = {
 	requestUpdate: function() {
 		if (Config.room && !initFailed) {
@@ -1320,7 +1376,7 @@ function systemInit() {
 	}, 7000);
 	
 	enumerateDevices(function() {
-		initVolumeControl();
+		Sound.initVolumeControl();
 		enableScreamers();
 		cacheResources();
 		initVideoPermissions(function() {
@@ -1332,15 +1388,15 @@ function systemInit() {
 $(document).ready(function() {
 	setTimeout(function() {
 		systemInit();
-	}, 400);
+	}, actionDelay);
 });
 
 $(window).on('beforeunload', function() {
-	if (settingsNeedReload) {
-		
-	} else {
+	if (!settingsNeedReload) { // Yep, I'll fix 3 IF's later.
 		if (callModeEnabled) {
-			return "You are currently in conference.\nDo you really want to close SpeakUP?";
+			if (LS.get("close_confirmation") && LS.get("close_confirmation") == "true") {
+				return "You are currently in conference.\nDo you really want to close SpeakUP?";
+			}
 		}
 	}
 });
