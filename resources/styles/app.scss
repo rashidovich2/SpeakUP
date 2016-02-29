@@ -499,12 +499,18 @@ body.messagePadding {
 }
 
 #preferencesWindow, #shareWindow {
-	@include transformTranslate(-50%, -50%);
 	position: fixed;
 	top: 50%;
 	left: 50%;
+	width: 750px;
+}
+
+#prefsAboutTitle {
+	font-weight: bold;
+}
+
+#shareWindow {
 	width: 600px;
-	max-width: 95%;
 }
 
 #fatalError {
@@ -546,6 +552,39 @@ body.messagePadding {
 		padding: 8px;
 		background: #135;
 		color: #fff;
+	}
+	
+	.modal-inner {
+		display: flex;
+		flex-direction: row;
+		
+		.modal-tabs {
+			flex: 1 1;
+			padding: 10px 10px 0 0;
+			
+			.modal-tab {
+				border: 1px solid #ccc;
+				padding: 5px;
+				margin: 5px 5px 5px 0;
+				@include css3-prefix(user-select, none);
+				cursor: pointer;
+			}
+			
+			.modal-tab-selected {
+				background: #135;
+				color: #fff;
+			}
+		}
+		
+		.modal-tab-content {
+			flex: 3 1;
+			display: none;
+			min-height: 180px;
+		}
+		
+		.modal-tab-content-active {
+			display: block;
+		}
 	}
 }
 
@@ -625,6 +664,10 @@ body.messagePadding {
 	.statusPanel {
 		zoom: .7;
 	}
+	
+	#preferencesWindow, #shareWindow {
+		width: 600px;
+	}
 }
 /* end: tablet version fixes */
 
@@ -672,6 +715,36 @@ body.messagePadding {
 		bottom: 0;
 		width: 100%;
 		max-width: 100%;
+	}
+	
+	.modal {
+		.modal-inner {
+			flex-direction: column;
+			
+			.modal-tabs {
+				display: flex;
+				padding: 0;
+				
+				.modal-tab {
+					flex: 1 1;
+					text-align: center;
+				}
+			}
+			
+			.modal-tab-content {
+				flex: 3 1;
+				display: none;
+				min-height: 180px;
+			}
+			
+			.modal-tab-content-active {
+				display: block;
+			}
+		}
+	}
+	
+	#preferencesWindow, #shareWindow {
+		width: 400px;
 	}
 }
 /* end: mobile version fixes */

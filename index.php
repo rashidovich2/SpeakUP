@@ -52,7 +52,7 @@ class CodeGen {
 	}
 }
 
-$ver = "1.8.3";
+$ver = "1.8.4";
 
 if (defined("DEBUG") || isset($_REQUEST['debug'])) {
 	$files = array(
@@ -140,40 +140,58 @@ trackStat("SpeakUP", $ver, "start");
 		<!-- MODAL WINDOWS -->
 		<div id='preferencesWindow' class='modal'>
 			<h3>Preferences</h3>
-			<form id='preferencesForm'>
-				<div class='row'>
-					<div><label for='audioDeviceSelector'>Audio Device </label></div>
-					<div><select id='audioDeviceSelector'></select></div>
+			<div class='modal-inner'>
+				<div class='modal-tabs'>
+					<div class='modal-tab' data-target='#prefFrmMedia'>Multimedia</div>
+					<div class='modal-tab' data-target='#prefFrmApp'>Application</div>
+					<div class='modal-tab' data-target='#prefFrmShare'>Share</div>
+					<div class='modal-tab' data-target='#prefFrmAbout'>About</div>
 				</div>
-				<div class='row'>
-					<div><label for='sliderVolume'>Audio Volume </label></div>
-					<div><input type='range' min='0' max='1' step='0.05' id='sliderVolume' class='trackbar' /></div>
-				</div>
-				<div class='row'>
-					<div><label for='videoDeviceSelector'>Video Device </label></div>
-					<div><select id='videoDeviceSelector'></select></div>
-				</div>
-				<div class='row'>
-					<div><label><input type='checkbox' id='videoDeviceQuality'/>Prefer HD video</label></div>
-				</div>
-				<div class='row'>
-					<div><label><input type='checkbox' id='confirmClose'/>Show confirmation on closing</label></div>
-				</div>
-				<div class='row'>
-					<div><button id='prefsCancel' class='btn'><i class="icon icon-cancel"></i> Cancel</button></div>
-					<div><button id='prefsSave' class='btn'><i class="icon icon-ok"></i> Save</button></div>
-				</div>
-			</form>
-		</div>
-
-		<div id='shareWindow' class='modal'>
-			<h3>Share Room</h3>
-			<div class='row'>
-				<div><label for='shareRoomLink'>Link </label></div>
-				<div><input type='text' id='shareRoomLink' value='' readonly /></div>
+				<form id='prefFrmMedia' class='modal-tab-content'>
+					<div class='row'>
+						<div><label for='audioDeviceSelector'>Microphone </label></div>
+						<div><select id='audioDeviceSelector'></select></div>
+					</div>
+					<div class='row'>
+						<div><label for='sliderVolume'>Playback Volume </label></div>
+						<div><input type='range' min='0' max='1' step='0.05' id='sliderVolume' class='trackbar' /></div>
+					</div>
+					<div class='row'>
+						<div><label for='videoDeviceSelector'>Camera </label></div>
+						<div><select id='videoDeviceSelector'></select></div>
+					</div>
+					<div class='row'>
+						<div><label><input type='checkbox' id='videoDeviceQuality'/>Prefer HD video</label></div>
+					</div>
+				</form>
+				
+				<form id='prefFrmApp' class='modal-tab-content'>
+					<div class='row'>
+						<div><label for='inputPrefsNickname'>Your Nickname </label></div>
+						<div><input type='text' id='inputPrefsNickname' /></div>
+					</div>
+					<div class='row'>
+						<div><label><input type='checkbox' id='confirmClose'/>Show confirmation on closing</label></div>
+					</div>
+				</form>
+				
+				<form id='prefFrmShare' class='modal-tab-content'>
+					<div class='row'>
+						<div><label for='shareRoomLink'>Room Link</label></div>
+						<div><input type='text' id='shareRoomLink' value='' readonly /></div>
+					</div>
+				</form>
+				
+				<form id='prefFrmAbout' class='modal-tab-content'>
+					<p id='prefsAboutTitle'>SpeakUP</p>
+					<p>Created by <a href='https://linksoft.cf/' target='_blank'>LinkShift</a>.</p>
+					<p>View project on <a href='https://github.com/linkshift/SpeakUP' target='_blank'>GitHub</a>.</p>
+				</form>
 			</div>
+			
 			<div class='row'>
-				<div><button id='shareClose' class='btn'><i class="icon icon-ok"></i> OK</button></div>
+				<div><button id='prefsCancel' class='btn'><i class="icon icon-cancel"></i> Cancel</button></div>
+				<div><button id='prefsSave' class='btn'><i class="icon icon-ok"></i> Save</button></div>
 			</div>
 		</div>
 		<!-- end: MODAL WINDOWS -->

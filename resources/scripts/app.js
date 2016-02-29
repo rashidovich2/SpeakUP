@@ -253,6 +253,40 @@ var NotificationWrapper = function (argTitle, argText) {
 	sendAutoDetect();
 }
 
+var Tabs = {
+	init: function(sel, index) {
+		var index = index || 0;
+		$(sel + ' .modal-tab-selected').removeClass('modal-tab-selected');
+		$(sel + ' .modal-tab-content-active').removeClass('modal-tab-content-active');
+		
+		$(sel + ' .modal-tab:eq(' + index + ')').addClass('modal-tab-selected');
+		$(sel + ' .modal-tab-content:eq(' + index + ')').addClass('modal-tab-content-active');
+		
+		$(sel + ' .modal-tab').unbind('click').on('click', function(e) {
+			e.preventDefault();
+			var target = $(this).data('target');
+			if (!target) return;
+			if ($(this).hasClass('modal-tab-selected')) return;
+			
+			$(sel + ' .modal-tab-content-active').removeClass('modal-tab-content-active');
+			$(sel + ' .modal-tab-selected').removeClass('modal-tab-selected');
+			
+			$(target).addClass('modal-tab-content-active');
+			$(this).addClass('modal-tab-selected');
+		});
+	},
+	
+	setIndex: function(sel, index) {
+		var index = index || 0;
+		
+		$(sel + ' .modal-tab-selected').removeClass('modal-tab-selected');
+		$(sel + ' .modal-tab-content-active').removeClass('modal-tab-content-active');
+		
+		$(sel + ' .modal-tab:eq(' + index + ')').addClass('modal-tab-selected');
+		$(sel + ' .modal-tab-content:eq(' + index + ')').addClass('modal-tab-content-active');
+	}
+}
+
 function showVolume(el, volume) {
 	//return;
 	if (!el) return;
@@ -283,6 +317,11 @@ function fixSpecialSymbols(text, onlyLatin){
 				   .replace(/>/g, "&gt;")
 				   .trim();
 	}
+}
+
+function hideModals() {
+	$('.modal').fadeOut('fast');
+	$('#modal-back').fadeOut('fast');
 }
 
 // Message Banner on top of app
@@ -585,6 +624,9 @@ function submitLoginForm() {
 	Config.nick = userNick;
 	Config.room = userRoom;
 	setRoom(true);
+	
+	$('#inputPrefsNickname').val(userNick);
+	
 	$('#loginWindow').slideUp('fast');
 	$('#loader .spinner').show();
 	EventLogger.log('login');
@@ -620,7 +662,7 @@ function showLoginWindow() {
 	$('#loginRoom').val(room);
 
 	$('#loader .spinner').hide();
-	$('.modal').slideUp('fast');
+	hideModals();
 	$('#loginWindow').slideDown('fast');
 	$('#loginForm').unbind('submit').on('submit', function(e) {
 		e.preventDefault();
@@ -720,6 +762,7 @@ function prepareCall() {
 		return;
 	} else {
 		Config.nick = nick;
+		$('#inputPrefsNickname').val(nick);
 	}
 
 	if (!Config.room) {
@@ -841,11 +884,11 @@ function prepareCall() {
 		var showPreferences = ['DevicesNotFoundError', 'SourceUnavailableError'];
 		if (loggable.indexOf(evtType) >= 0) {
 			if (showPreferences.indexOf(evtData.name) >= 0) {
-				$('.modal').slideUp('fast');
+				hideModals();
 				LS.del("device_audio");
 				LS.del("device_video");
 				settingsNeedReload = true;
-				$('#preferencesWindow').slideDown('fast');
+				$('#preferencesWindow').fadeIn('fast');
 			} else {
 				console.log('event', evtType, evtData);
 				if (evtType === 'localMediaError' && evtData.name === 'PermissionDeniedError') {
@@ -896,13 +939,14 @@ function setRoom(onlyLocation) {
 	if (onlyLocation) return;
 
 	$('#createRoom').remove();
-	$('#overlay').data('tooltip', "SpeakUP v" + Config.version + "<br/>&copy; LinkSoft.cf");
 	initTooltips('#overlay');
+	$('#shareRoomLink').val(location.origin + '/c/' + Config.room);
+	
 	$('#tlb-share').unbind('click').click(function() {
-		$('.modal').slideUp('fast');
+		hideModals();
 		$('#modal-back').fadeIn('fast');
-		$('#shareWindow').slideDown('fast', function() {
-			$('#shareRoomLink').val(location.origin + '/c/' + Config.room);
+		Tabs.setIndex('#preferencesWindow', 2);
+		$('#preferencesWindow').fadeIn('fast', function() {
 			$('#shareRoomLink').select().focus();
 		});
 	});
@@ -1051,6 +1095,30 @@ function sendScreamer(scId) {
 	}, 30000);
 }
 
+var Preferences = {
+	save: function() {
+		LS.set("device_audio", $('#audioDeviceSelector').val());
+		LS.set("device_video", $('#videoDeviceSelector').val());
+		LS.set("nickname", $('#inputPrefsNickname').val());
+		LS.set("enable_hd", $('#videoDeviceQuality').prop('checked'));
+		LS.set("close_confirmation", $('#confirmClose').prop('checked'));
+		if (snMode) {
+			speakupClient.confirmClose($('#confirmClose').prop('checked'));
+		}
+		
+		Sound.updateRemoteVolume($('#sliderVolume').val());
+		$('#preferencesWindow').fadeOut('fast');
+		if (settingsNeedReload || $('body').hasClass('loading')) {
+			alert("Applying settings...", "info");
+			setTimeout(function() {
+				location.reload();
+			}, actionDelay);
+		} else {
+			$('#modal-back').fadeOut('fast');
+		}
+	}
+}
+
 function initButtons() {
 	if (initFailed) return;
 
@@ -1128,42 +1196,30 @@ function initButtons() {
 	$('#prefsCancel').unbind('click').on('click', function(e) {
 		e.preventDefault();
 		$('#modal-back').fadeOut('fast');
-		$('#preferencesWindow').slideUp('fast');
+		$('#preferencesWindow').fadeOut('fast');
 	});
 
 	$('#shareClose').unbind('click').click(function(e) {
 		e.preventDefault();
 		$('#modal-back').fadeOut('fast');
-		$('#shareWindow').slideUp('fast');
+		$('#shareWindow').fadeOut('fast');
 	});
 
-	$('#preferencesForm').unbind('submit').on('submit', function(e) {
+	$('#prefFrmMedia,#prefFrmApp,#prefFrmAbout').unbind('submit').on('submit', function(e) {
 		e.preventDefault();
-		LS.set("device_audio", $('#audioDeviceSelector').val());
-		LS.set("device_video", $('#videoDeviceSelector').val());
-		LS.set("enable_hd", $('#videoDeviceQuality').prop('checked'));
-		LS.set("close_confirmation", $('#confirmClose').prop('checked'));
-		if (snMode) {
-			speakupClient.confirmClose($('#confirmClose').prop('checked'));
-		}
-		
-		Sound.updateRemoteVolume($('#sliderVolume').val());
-		$('#preferencesWindow').fadeOut('fast');
-		if (settingsNeedReload || $('body').hasClass('loading')) {
-			alert("Applying settings...", "info");
-			setTimeout(function() {
-				location.reload();
-			}, actionDelay);
-		} else {
-			$('#modal-back').fadeOut('fast');
-		}
+		Preferences.save();
+	});
+	
+	$('#prefsSave').unbind('click').on('click', function() {
+		Preferences.save();
 	});
 
 	$('#tlb-pref,#fatalErrorSettings').unbind('click').click(function(e) {
 		e.preventDefault();
-		$('.modal').slideUp('fast');
+		hideModals();
 		$('#modal-back').fadeIn('fast');
-		$('#preferencesWindow').slideDown('fast');
+		Tabs.setIndex('#preferencesWindow', 0);
+		$('#preferencesWindow').fadeIn('fast');
 	});
 
 	$('#toolbar button').unbind('focus').on('focus', function() {
@@ -1177,8 +1233,7 @@ function initButtons() {
 		});
 
 	$('#modal-back').unbind('click').on('click', function() {
-		$('#modal-back').fadeOut('fast');
-		$('.modal').slideUp('fast');
+		hideModals();
 	});
 
 	$('#msgUseClient>a').unbind('click').on('click', function() {
@@ -1226,8 +1281,12 @@ function initButtons() {
 		}
 	});
 
-	$('#videoDeviceSelector,#audioDeviceSelector,#videoDeviceQuality').on('change', function() {
+	$('#videoDeviceSelector,#audioDeviceSelector,#videoDeviceQuality,#inputPrefsNickname').on('change', function() {
 		settingsNeedReload = true;
+	});
+	
+	$('#shareRoomLink').unbind('click').on('click', function() {
+		$(this).select().focus();
 	});
 	
 	$('#ownVideo').unbind('click').on('click', function() {
@@ -1294,6 +1353,9 @@ function injectElements() {
 
 	Config.staticPath = $('body').data('static');
 	Config.version = $('body').data('version');
+	
+	$('#overlay').data('tooltip', "SpeakUP v" + Config.version + "<br/>&copy; LinkSoft.cf");
+	$('#prefsAboutTitle').html("SpeakUP v" + Config.version);
 
 	if (snMode) {
 		window.speakupClient = {
@@ -1324,7 +1386,20 @@ function injectElements() {
 			}
 		}
 	}
+	
+	Tabs.init('#preferencesWindow', 0);
 }
+
+function positionModalWindows() {
+	var posEl = function (sel) {
+		var pxT = $('body').height()/2 - $(sel).height()/2;
+		var pxL = $('body').width()/2 - $(sel).width()/2;
+		$(sel).css({left: pxL, top: pxT});
+	};
+	
+	posEl('#preferencesWindow');
+	posEl('#shareWindow');
+};
 
 // Pre-cache resources
 function cacheResources() {
@@ -1366,6 +1441,7 @@ var InfoPull = {
 
 function systemInit() {
 	injectElements();
+	positionModalWindows();
 	initButtons();
 	initTooltips();
 		
@@ -1403,4 +1479,5 @@ $(window).on('beforeunload', function() {
 
 $(window).on('resize', function() {
 	Chat.scrollLog();
+	positionModalWindows();
 });

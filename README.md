@@ -18,6 +18,12 @@ It uses peer-2-peer connection between clients to transmit audio/video (WebRTC p
 Not available at the moment.
 
 ## Version History
+### 1.8.4
+* Reworked preferences interface.
+* Share window integrated in preferences window.
+* Ability to change nickname.
+* Fixes for mobile/tablet versions.
+
 ### 1.8.3
 * Updated SimpleWebRTC Library.
 * Improved loading time by minifying javascript.
