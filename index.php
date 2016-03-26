@@ -285,7 +285,7 @@ trackStat("SpeakUP", $ver, "start");
 		<!-- end: Google Analytics -->
 
 		<!-- JS LIBS -->
-		<script src='https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js'></script>
+		<script src='https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js'></script>
 		<?=$code->javascript?>
 		<!-- end: JS LIBS -->
 	</body>
