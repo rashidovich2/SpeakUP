@@ -3,6 +3,8 @@ error_reporting(0);
 require('../../html/scripts/engine/config.php');
 require('../../html/scripts/engine/functions.php');
 
+$ver = "1.8.5";
+
 class CodeGen {
 	public $stylesheet = '';
 	public $javascript = '';
@@ -51,8 +53,6 @@ class CodeGen {
 		$this->iconsFav = $this->listIcons('icon', $this->staticPath . '/apps/speakup/images/icons', 'favicon', $this->sizes->icon);
 	}
 }
-
-$ver = "1.8.4";
 
 if (defined("DEBUG") || isset($_REQUEST['debug'])) {
 	$files = array(

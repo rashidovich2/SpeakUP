@@ -197,10 +197,10 @@ function alert(text, type, timeout){
 }
 
 // Handle Browser/Clients Notifications
-var NotificationWrapper = function (argTitle, argText) {
+var NotificationWrapper = function (argTitle, argText, argTimeout) {
 	var title = argTitle;
 	var text = argText;
-	var timeout = notificationTimeout;
+	var timeout = argTimeout || notificationTimeout;
 	
 	var sendIpc = function() {
 		var msg = {
@@ -383,7 +383,9 @@ function secondsToString(msec) {
 	var minutes = parseInt(tDate.getUTCMinutes());
     var seconds = parseInt(tDate.getUTCSeconds());
 	
-	return (hours == 0 ? '' : ((hours < 10 ? "0" + hours : hours) + ":")) + (minutes < 10 ? "0" + minutes : minutes) + ":" + (seconds  < 10 ? "0" + seconds : seconds);
+	return (hours == 0 ? '' : ((hours < 10 ? "0" + hours : hours) + ":")) +
+	       (minutes < 10 ? "0" + minutes : minutes) + ":" +
+		   (seconds  < 10 ? "0" + seconds : seconds);
 }
 
 // Chat object and functions
@@ -414,7 +416,7 @@ var Chat = {
 		if (data.type === 'chat') {
 			var msg = fixSpecialSymbols(data.payload.message);
 			if (msg.length == 0) return;
-			this.logMessage("<b>" + fixSpecialSymbols(data.payload.nick) + "</b><br/>" + msg, (toMyself | false));
+			this.logMessage("<b>" + fixSpecialSymbols(data.payload.nick) + "</b><br/>" + msg, (toMyself || false));
 			if (!toMyself) {
 				Sound.play('message');
 				alert("New message from " + fixSpecialSymbols(data.payload.nick) + ":<br/>" + fixSpecialSymbols(data.payload.message), 'info');
@@ -434,7 +436,8 @@ var Chat = {
 			this.logMessage(
 				"<b>" + fixSpecialSymbols(data.payload.nick) + "</b><br/>" +
 				"<iframe width='100%' height='300' src='https://www.youtube-nocookie.com/embed/" + ytId[2] +
-				"?rel=0&amp;controls=1&amp;autoplay=1' frameborder='0' allowfullscreen></iframe>"
+				"?rel=0&amp;controls=1&amp;autoplay=1' frameborder='0' allowfullscreen></iframe>",
+				(toMyself || false)
 			);
 
 			if (!toMyself) {
@@ -447,7 +450,7 @@ var Chat = {
 
 		if (data.type === 'screamer') {
 			var scId = data.payload.id;
-			if (!LS.get('disable_screamers')) {
+			if (!LS.get('screamers_nosound')) {
 				if (scId === 1 || scId === 2) {
 					Sound.play('scream' + scId);
 				}
@@ -514,15 +517,10 @@ var Chat = {
 	submitMsg: function() {
 		var ptext = $('#compose-input').val();
 
-		if (matches = ptext.match(/^\/command (screamer_enable|screamer_nomore)/)) {
+		if (matches = ptext.match(/^\/command ([a-zA-Z0-9\-_]*)/)) {
 			egg = matches[1];
 			if (egg && egg == 'screamer_enable') {
 				enableScreamers(true);
-			}
-
-			if (egg && egg == 'screamer_nomore') {
-				alert("OK, you won't be able to hear screamers", 'info');
-				LS.set('disable_screamers', 1);
 			}
 
 			$('#compose-input').val('');
@@ -917,11 +915,11 @@ function enableScreamers(enable) {
 	if (initFailed) return;
 	var enable = enable || false;
 	if (enable) {
-		LS.set('easter', 1);
+		LS.set('screamers_enabled', 1);
 		alert("Screamers are now available", 'info');
 	}
 
-	if (LS.get('easter') == 1) {
+	if (LS.get('screamers_enabled') == 1) {
 		$('#chat-sc').removeClass('hidden');
 	}
 }
@@ -1172,12 +1170,20 @@ function initButtons() {
 			muteActive = true;
 			webrtc.pauseVideo();
 			webrtc.mute();
+			webrtc.getPeers().forEach(function(el) {
+				el.videoEl.volume = 0;
+			});
 			$(this).removeClass('inactive').addClass('active');
+			$('#overlay-pause').fadeIn('fast');
 		} else {
 			muteActive = false;
 			webrtc.resumeVideo();
 			webrtc.unmute();
+			webrtc.getPeers().forEach(function(el) {
+				el.videoEl.volume = Sound.volume;
+			});
 			$(this).removeClass('active').addClass('inactive');
+			$('#overlay-pause').fadeOut('fast');
 		}
 	});
 
@@ -1350,6 +1356,10 @@ function injectElements() {
 	if ($('#rainbow').length == 0) {
 		$('body').append("<div id='rainbow'></div>");
 	}
+	
+	if ($('#overlay-pause').length == 0) {
+		$('body').append("<div id='overlay-pause' class='noselect'><div id='overlay-pause-text'>Paused</div></div>");
+	}
 
 	Config.staticPath = $('body').data('static');
 	Config.version = $('body').data('version');
@@ -1407,7 +1417,7 @@ function cacheResources() {
 	for (var i = 0; i < audioFiles.length; i++) {
 		var snd = new Audio(Config.staticPath + "/apps/speakup/sounds/" + audioFiles[i] + ".ogg");
 		snd.muted = true;
-		// Fix for Grunt's warning: "WARN: Side effects in initialization of unused variable snd"
+		// Fix for uglifyjs' warning: "WARN: Side effects in initialization of unused variable snd"
 	}
 
 	var imageFiles = ['screamer1', 'screamer2'];

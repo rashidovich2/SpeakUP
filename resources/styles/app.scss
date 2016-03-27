@@ -12,6 +12,9 @@
 	@include css3-prefix('transform', "translate(#{$x}, #{$y})");
 }
 
+$mainColor: #135;
+$altColor: #246;
+
 * {
 	box-sizing: border-box;
 }
@@ -19,7 +22,7 @@
 html {
 	margin: 0;
 	padding: 0;
-	background: #123;
+	background: $mainColor;
 	min-width: 100%;
 	min-height: 100%;
 	color: #000;
@@ -31,11 +34,11 @@ body {
 	min-width: 100%;
 	min-height: 100%;
 	position: fixed;
-	background-image: url('../images/polygons.svg'), linear-gradient(#135, #246);
+	background-image: url('../images/polygons.svg'), linear-gradient($mainColor, $altColor);
     background-repeat: repeat;
     background-attachment: fixed;
     background-position: 50% 50%;
-    background-color: #135;
+    background-color: $mainColor;
 }
 
 /* special classes */
@@ -221,9 +224,6 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 	align-content: stretch;
 
 	.videoContainer {
-		/*
-		@include maximizeElement();
-		*/
 		margin: auto;
 		display: inline-block;
 		text-align: center;
@@ -298,7 +298,7 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 	flex-direction: column;
 	justify-content: space-between;
 	margin-right: -100%;
-	z-index: 2;
+	z-index: 4;
 	box-shadow: 0 0 5px 1px #000;
 	@include transition('.2s padding-top');
 
@@ -355,7 +355,7 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="file"]:focus
 	position: fixed;
 	bottom: 0;
 	right: 5px;
-	z-index: 1;
+	z-index: 3;
 	opacity: .3;
 	background: url('../images/overlay.png') no-repeat 0 0;
 	background-size: contain;
@@ -467,7 +467,7 @@ body.messagePadding {
 	left: 50%;
 	width: 95%;
 	max-width: 600px;
-	z-index: 1;
+	z-index: 3;
 
 	button {
 		@include transition(.1s color, .1s opacity);
@@ -550,7 +550,7 @@ body.messagePadding {
 		text-align: center;
 		border-radius: 5px 5px 0 0;
 		padding: 8px;
-		background: #135;
+		background: $mainColor;
 		color: #fff;
 	}
 	
@@ -571,7 +571,7 @@ body.messagePadding {
 			}
 			
 			.modal-tab-selected {
-				background: #135;
+				background: $mainColor;
 				color: #fff;
 			}
 		}
@@ -633,6 +633,26 @@ body.messagePadding {
 #msgUseClient {
 	text-align: center;
 	margin: 7px 0;
+}
+
+#overlay-pause {
+	@include maximizeElement();
+	background: rgba(0, 0, 0, .9);
+	z-index: 2;
+	display: none;
+	
+	#overlay-pause-text {
+		font-size: 30pt;
+		color: #fff;
+		text-shadow: -3px -3px 20px $mainColor,
+		             -3px 3px 20px $mainColor,
+					 3px -3px 20px $mainColor,
+					 3px 3px 20px $mainColor;
+		top: 50%;
+		position: fixed;
+		left: 50%;
+		@include transformTranslate(-50%, -50%);
+	}
 }
 
 /* tablet version fixes */
